@@ -1,0 +1,201 @@
+# Boots the real thing in an emulator, on the CI runner:
+#   game data   = the cached Android build (android.yml), never leaves the runner
+#   wrapper     = mvlo_nx.nro built from this commit
+#   emulator    = Eden (yuzu lineage, linuxserver/eden image), eden-cli under
+#                 Xvfb, Vulkan on lavapipe (software) -- slow, but it runs the
+#                 same .nro the console runs, so boot/patch/GC/network bugs
+#                 show up in debug.log exactly as they would on hardware.
+# The job prints debug.log / stall.log / crash logs and the emulator's own log.
+name: emu-test
+
+on:
+  push:
+    paths:
+      - "source/**"
+      - ".github/workflows/emu-test.yml"
+      - "tools/fetch_splash.py"
+      - "tools/splash_sources.txt"
+  workflow_run:
+    workflows: ["android-build"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "How long to let the game run in the emulator"
+        default: "10"
+      ini_extra:
+        description: "Extra mvlo.ini lines (e.g. 'gc = disable'), \\n-separated, appended to [debug]"
+        default: ""
+
+concurrency:
+  group: emu-test
+  cancel-in-progress: true
+
+jobs:
+  emu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MINUTES: ${{ inputs.minutes || '10' }}
+      # Scripted pad-1 presses (second@): one input between two screenshots.
+      INI_EXTRA: ${{ inputs.ini_extra || 'autopress = A@65,A@125,DOWN@185,A@245,B@305,B@365,RIGHT@425,A@485\nhitch_ms = 600\ngc_spin_test = 900\nnetlog = 127.0.0.1:9999' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore cached Android build
+        id: apk
+        uses: actions/cache/restore@v4
+        with:
+          path: android-out
+          key: android-out-v2.2.0.1-none
+          restore-keys: android-out-v2.2.0.1-
+
+      - name: No game data yet?
+        if: steps.apk.outputs.cache-matched-key == ''
+        run: echo "::warning::no cached Android build -- run the android-build workflow first"; exit 0
+
+      - name: Build mvlo_nx.nro
+        if: steps.apk.outputs.cache-matched-key != ''
+        run: docker run --rm -v "$PWD":/src -w /src devkitpro/devkita64:latest make -j"$(nproc)"
+
+      - name: Lay out the emulated SD card
+        if: steps.apk.outputs.cache-matched-key != ''
+        run: |
+          set -e
+          pip install --quiet pyelftools capstone pillow
+          sudo apt-get install -y -qq librsvg2-bin >/dev/null || true
+          bash tools/package_sd.sh android-out sd | grep -E "fetch_splash|warning" || true
+          SD=emu/home/.local/share/eden/sdmc
+          mkdir -p "$SD" emu/home/.config/eden
+          cp -r sd/switch "$SD/"
+          cp mvlo_nx.nro "$SD/switch/mvlo/"
+          cp dist/mvlo.ini.example "$SD/switch/mvlo/mvlo.ini"
+          sed -i 's/^log_sync = 0/log_sync = 1/' "$SD/switch/mvlo/mvlo.ini"
+          printf '%b\n' "[debug]\n$INI_EXTRA" >> "$SD/switch/mvlo/mvlo.ini"
+          du -sh "$SD/switch/mvlo"; ls "$SD/switch/mvlo"
+          echo "--- assets/bin/Data (top level)"; ls -la "$SD/switch/mvlo/assets/bin/Data" | head -60
+
+      - name: Wrapper self tests in Eden (smoke 1 = libunity, 3 = GC signals, 4 = DNS/UDP)
+        if: steps.apk.outputs.cache-matched-key != ''
+        run: |
+          docker pull -q linuxserver/eden:latest
+          D=emu/home/.local/share/eden/sdmc/switch/mvlo
+          cp "$D/mvlo.ini" mvlo.ini.game
+          for t in 1 3 4; do
+            sed "s/^\[debug\]/[debug]\nsmoke_test = $t/" mvlo.ini.game > "$D/mvlo.ini"
+            docker run --rm -v "$PWD/emu":/w -e HOME=/w/home --entrypoint bash linuxserver/eden:latest -c \
+              "timeout 90 xvfb-run -a -s '-screen 0 1280x720x24' eden-cli /w/home/.local/share/eden/sdmc/switch/mvlo/mvlo_nx.nro > /w/eden_selftest.log 2>&1" || true
+            echo "===== smoke_test=$t"; grep -E "\[smoke\]|\[selftest\]|\[patch\]|\[region\]|FATAL" "$D/debug.log" || true
+          done
+          cp mvlo.ini.game "$D/mvlo.ini"
+          rm -f "$D/stall.log" "$D/debug.prev.log"
+
+      - name: Run in Eden (${{ env.MINUTES }} min, screenshot every minute)
+        if: steps.apk.outputs.cache-matched-key != ''
+        run: |
+          # [debug] netlog = 127.0.0.1:9999 (INI_EXTRA): heartbeat datagrams to the runner
+          python3 -I tools/switch/netlog_listen.py 9999 emu/netlog.txt > /dev/null 2>&1 &
+          LISTENER=$!
+          docker run --rm --network host -v "$PWD/emu":/w -e HOME=/w/home -e MINUTES="$MINUTES" --entrypoint bash linuxserver/eden:latest -c '
+            Xvfb :99 -screen 0 1280x720x24 >/dev/null 2>&1 & sleep 2
+            export DISPLAY=:99
+            eden-cli /w/home/.local/share/eden/sdmc/switch/mvlo/mvlo_nx.nro > /w/eden.log 2>&1 &
+            for i in 03 06 09 12 15 20 25; do sleep 3; [ $i -ge 20 ] && sleep 2; xwd -root -silent -display :99 > /w/early_$i.xwd; done
+            sleep 25
+            for i in $(seq 1 "$MINUTES"); do [ $i -gt 1 ] && sleep 60; xwd -root -silent -display :99 > /w/shot_$(printf %02d $i).xwd; done
+            pkill eden-cli; sleep 2; true' || true
+          cp emu/home/.local/share/eden/sdmc/switch/mvlo/debug.log emu/main.log || true
+          cp emu/home/.local/share/eden/sdmc/switch/mvlo/stall.log emu/main-stall.log 2>/dev/null || true
+          kill $LISTENER 2>/dev/null || true
+          echo "================ netlog: $(grep -c ' #' emu/netlog.txt 2>/dev/null || echo 0) datagrams; first 2 and last 3"
+          { grep ' #' emu/netlog.txt | head -2; grep ' #' emu/netlog.txt | tail -3; } 2>/dev/null || echo "(none)"
+
+      - name: Relaunch (PlayerPrefs persistence, JNI inventory at log_level 2)
+        if: steps.apk.outputs.cache-matched-key != ''
+        run: |
+          D=emu/home/.local/share/eden/sdmc/switch/mvlo
+          echo "--- prefs.kv after the first run"; cat "$D/prefs.kv" 2>/dev/null | cut -c1-120 || echo "(none)"
+          printf '%b\n' "[debug]\nlog_level = 2\nautopress =\ngc_spin_test =\n[net]\nsmall_ipc = 1" >> "$D/mvlo.ini"
+          docker run --rm -v "$PWD/emu":/w -e HOME=/w/home --entrypoint bash linuxserver/eden:latest -c '
+            Xvfb :98 -screen 0 1280x720x24 >/dev/null 2>&1 & sleep 2
+            export DISPLAY=:98
+            eden-cli /w/home/.local/share/eden/sdmc/switch/mvlo/mvlo_nx.nro > /w/eden2.log 2>&1 &
+            for i in 03 06 09; do sleep 3; xwd -root -silent -display :98 > /w/relaunch_$i.xwd; done
+            sleep 141; xwd -root -silent -display :98 > /w/relaunch.xwd
+            pkill eden-cli; sleep 2; true' || true
+          cp "$D/debug.log" emu/relaunch.log || true
+          echo "================ relaunch: [prefs] lines"; grep "\[prefs\]" emu/relaunch.log | head -120 || true
+          echo "================ relaunch: Class.forName"; grep "Class.forName" emu/relaunch.log | sed 's/^ *[0-9.]* //' | sort | uniq -c | head -80 || true
+          echo "================ relaunch: JNI method ids"; grep "JNI id:" emu/relaunch.log | sed 's/^ *[0-9.]* //' | sort -u | head -400 || true
+          echo "================ relaunch: JNI upcalls"; grep "\[jni\] call:" emu/relaunch.log | sed 's/^ *[0-9.]* //' | sort -u | head -400 || true
+          echo "================ relaunch: network (small_ipc = 1)"; grep -E "\[net\] (BSD|FIONREAD|bsd requests)|^ +(send|sendto|recv|recvfrom|poll|ioctl) " emu/relaunch.log | head -20 || true
+          echo "================ relaunch: early loading screen"; grep -E "\[load\]|\[gfx\] (Unity window|mode=)" emu/relaunch.log | head -20 || true
+          for f in emu/relaunch_*.xwd emu/relaunch.xwd; do [ -f "$f" ] && python3 tools/xwd2txt.py "$f" 100 | head -1; done || true
+
+      - name: Screenshots (ASCII thumbnails)
+        if: always() && steps.apk.outputs.cache-matched-key != ''
+        run: |
+          pip install --quiet pillow || true
+          mkdir -p shots
+          for f in emu/early_*.xwd emu/shot_*.xwd; do
+            [ -f "$f" ] || continue
+            b=$(basename "$f" .xwd)
+            python3 tools/xwd2txt.py "$f" 100 --png "shots/$b.png" || true
+          done
+
+      - name: debug.log
+        if: always() && steps.apk.outputs.cache-matched-key != ''
+        run: |
+          D=emu/home/.local/share/eden/sdmc/switch/mvlo
+          ls -la "$D"
+          NOISE='\[wd\] alive|\[gpua\] live=|nativeRender frame|\[gfx\] swap [0-9]+ (enter|ok)'
+          echo "================ debug.log (first 1500 lines, periodic noise removed)"; grep -Ev "$NOISE" emu/main.log | head -1500 || true
+          echo "================ debug.log (last 300 lines, periodic noise removed)"; grep -Ev "$NOISE" emu/main.log | tail -300 || true
+          SYMS=""
+          if [ -f android-out/symbols.zip ]; then
+            mkdir -p syms && unzip -oq android-out/symbols.zip -d syms || true
+            for f in $(find syms -name '*.so'); do b=$(basename "$f" | sed 's/\.sym\.so$/.so/; s/\.dbg\.so$/.so/'); SYMS="$SYMS $b=$f"; done
+          fi
+          # First stall of the MAIN run (the relaunch overwrites stall.log):
+          # its head holds the engine main thread's backtrace.
+          if [ -f emu/main-stall.log ] && grep -q "STALL #1" emu/main-stall.log; then
+            echo "================ main-run stall.log, first dump (symbolized)"
+            awk '/STALL #1/{p=1} p' emu/main-stall.log | grep -v '\[wd\] alive' | head -120 > emu/first-stall.txt
+            if [ -n "$SYMS" ]; then python3 tools/re/symbolize.py emu/first-stall.txt $SYMS; else cat emu/first-stall.txt; fi
+          fi
+          for f in stall.log crash.log; do
+            [ -f "$D/$f" ] || continue
+            echo "================ $f (symbolized: $SYMS)"
+            if [ -n "$SYMS" ]; then python3 tools/re/symbolize.py "$D/$f" $SYMS | grep -v '\[wd\] alive' | tail -300; else grep -v '\[wd\] alive' "$D/$f" | tail -300; fi
+          done
+          echo "================ eden.log (filtered tail)"
+          sed 's/\x1b\[[0-9;]*m//g' emu/eden.log | grep -Ev "SynthesizeSystemArchive|System archive generation|Commit: \(STUBBED\)|GetFileTimeStampRaw|svc_debug_string|\[gpua\]|\[wd\] alive|nativeRender frame" | tail -150 || true
+
+      - name: Summary (last screenshot + errors)
+        if: always() && steps.apk.outputs.cache-matched-key != ''
+        run: |
+          D=emu/home/.local/share/eden/sdmc/switch/mvlo
+          echo "il2cpp files rewritten by the game (0 = pre-extraction accepted): $(find "$D/il2cpp" -type f -newer "$D/mvlo_nx.nro" 2>/dev/null | wc -l)"
+          M=emu/main.log
+          grep -E "\[oc\] (ARMED|DISABLED|commit-pool)|\[gpua\] memalign FAILED|SLOW nativeRender: [0-9]+ ms \(frame [01]\)|\[gfx\] (wrapped|targetFrameRate)|\[load\]|\[kbd\]|\[selftest\]|\[sig\] .*(stuck|cannot|FAILED)" "$M" | head -60 || true
+          last=$(ls emu/shot_*.xwd 2>/dev/null | tail -1)
+          for f in emu/early_*.xwd emu/shot_*.xwd; do [ -f "$f" ] && python3 tools/xwd2txt.py "$f" 100 | head -1; done
+          [ -n "$last" ] && python3 tools/xwd2txt.py "$last" 100 || true
+          echo "================ distinct error-like lines (main run)"
+          grep -iE "exception|error|fail|fatal|missing|not found|abort" "$M" | sed 's/^ *[0-9.]* *//' | sort | uniq -c | sort -rn | head -60 || true
+          echo "================ last [loop] line (main run)"; grep "\[loop\] frame=" "$M" | tail -1 || true
+          echo "================ relaunch: float prefs"; grep -E "\[prefs\] (getFloat|putFloat|load)" emu/relaunch.log | head -40 || true
+          echo "================ relaunch: errors"; grep -iE "exception|fatal|crash" emu/relaunch.log | sed 's/^ *[0-9.]* *//' | sort | uniq -c | sort -rn | head -20 || true
+          echo "================ relaunch: last [loop] line"; grep "\[loop\] frame=" emu/relaunch.log | tail -1 || true
+
+      - name: Upload logs
+        if: always() && steps.apk.outputs.cache-matched-key != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: emu-logs
+          path: |
+            shots/*.png
+            emu/*.log
+            emu/eden.log
+            emu/home/.local/share/eden/sdmc/switch/mvlo/*.log
+          retention-days: 7

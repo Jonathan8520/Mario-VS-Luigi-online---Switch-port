@@ -1,0 +1,78 @@
+# Builds the Switch wrapper (mvlo_nx.nro) in the official devkitPro image.
+# Cheap (~2 min); runs on every push touching the wrapper.
+name: nro
+
+on:
+  push:
+    paths:
+      - "source/**"
+      - "Makefile"
+      - "icon.jpg"
+      - "dist/**"
+      - "tools/fetch_splash.py"
+      - "tools/splash_sources.txt"
+      - ".github/workflows/nro.yml"
+  workflow_dispatch:
+
+jobs:
+  # Loading-screen pictures + .nro icon, downloaded at build time (they are
+  # never committed). A failure only means the plain screen / the repo icon.
+  assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch and convert
+        run: |
+          pip install --quiet pillow
+          sudo apt-get install -y -qq librsvg2-bin >/dev/null || true
+          python3 tools/fetch_splash.py --out assets/splash --icon assets/icon.jpg
+          ls -la assets assets/splash
+      - uses: actions/upload-artifact@v4
+        with:
+          name: splash-assets
+          path: assets
+          retention-days: 1
+
+  nro:
+    needs: assets
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: splash-assets
+          path: assets
+      - name: Build
+        run: |
+          if [ -f assets/icon.jpg ]; then export APP_ICON="$PWD/assets/icon.jpg"; echo "icon: downloaded"; else echo "icon: repository icon.jpg"; fi
+          make -j"$(nproc)" 2>&1 | tee build.log
+          test -f mvlo_nx.nro
+          ls -la mvlo_nx.nro
+      - name: Warnings summary
+        if: always()
+        run: grep -E "warning|error" build.log | sort -u | head -100 || true
+      - name: Package
+        run: |
+          mkdir -p out/switch/mvlo
+          cp mvlo_nx.nro out/switch/mvlo/
+          cp dist/mvlo.ini.example out/switch/mvlo/
+          if [ -d assets/splash ]; then cp -r assets/splash out/switch/mvlo/; fi
+          cp docs/TEST.md out/ 2>/dev/null || true
+          echo "commit ${GITHUB_SHA}" > out/switch/mvlo/NRO_BUILDINFO.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mvlo_nx-nro
+          path: out
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mvlo_nx-elf-debug
+          path: |
+            mvlo_nx.elf
+            build/mvlo_nx.map
+          retention-days: 14

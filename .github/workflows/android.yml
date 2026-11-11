@@ -1,0 +1,197 @@
+# Android (IL2CPP / ARM64 / GLES3) build of the OFFICIAL game sources, whose
+# native libraries + assets the Switch wrapper loads.
+#
+# EXPENSIVE (Unity image ~9 GB, IL2CPP build ~30-60 min), so:
+#   - manual trigger only (workflow_dispatch);
+#   - the raw APK + symbols are kept in the Actions CACHE (not counted against
+#     the private-repo artifact quota) under a key derived from the game tag and
+#     our unity/ inputs. A re-run with the same inputs skips Unity entirely and
+#     only re-packages. Caches expire after 7 days without access: re-run this
+#     workflow once a week if you want to keep it warm.
+#   - the user-facing artifact is the ready-to-copy SD folder (mvlo-sd-data).
+name: android-build
+
+on:
+  push:
+    paths:
+      - "unity/**"
+      - ".github/workflows/android.yml"
+      - "tools/package_sd.sh"
+      - "tools/fetch_splash.py"
+      - "tools/splash_sources.txt"
+      - "tools/re/**"
+      - "dist/**"
+  workflow_dispatch:
+    inputs:
+      game_ref:
+        description: "Tag/commit of ipodtouch0218/NSMB-MarioVsLuigi"
+        default: "v2.2.0.1"
+        required: true
+      force_rebuild:
+        description: "Ignore the cached APK and rebuild with Unity"
+        type: boolean
+        default: false
+
+concurrency:
+  group: android-build
+  cancel-in-progress: false
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      GAME_REF: ${{ inputs.game_ref || 'v2.2.0.1' }}
+    steps:
+      - name: Checkout port repo
+        uses: actions/checkout@v4
+
+      - name: Cache key
+        id: key
+        run: |
+          h=$(cat unity/Editor/*.cs unity/Runtime/NxPort/*.cs unity/prepare_project.py | sha256sum | cut -c1-16)
+          echo "out=android-out-${{ env.GAME_REF }}-$h" >> "$GITHUB_OUTPUT"
+          echo "lib=android-library-${{ env.GAME_REF }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached APK
+        id: outcache
+        if: ${{ inputs.force_rebuild != true }}
+        uses: actions/cache/restore@v4
+        with:
+          path: android-out
+          key: ${{ steps.key.outputs.out }}
+
+      - name: Free disk space for the Unity image
+        if: steps.outcache.outputs.cache-hit != 'true'
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
+      - name: Swap + resource log
+        if: steps.outcache.outputs.cache-hit != 'true'
+        run: |
+          # The runner has ~8 GB of RAM; the first run lost it (starvation)
+          # with its swap removed. 4 GB of swap (disk is needed for the ~20 GB
+          # Unity image: 12 GB of swap ran the disk out), and a resource log.
+          sudo swapoff -a || true
+          sudo rm -f /swapfile /mnt/swapfile || true
+          sudo fallocate -l 4G /swapfile2 && sudo chmod 600 /swapfile2 && sudo mkswap /swapfile2 >/dev/null && sudo swapon /swapfile2
+          free -m; df -h /
+          nohup bash -c 'while true; do echo "$(date -u +%H:%M:%S) $(free -m | awk "/Mem/{print \"mem used \"\$3\"/\"\$2}") $(free -m | awk "/Swap/{print \"swap \"\$3}") $(df -h / | awk "NR==2{print \"disk \"\$4\" free\"}") load $(cut -d" " -f1 /proc/loadavg)"; sleep 60; done' > /tmp/resources.log 2>&1 &
+
+      - name: Checkout official game sources
+        if: steps.outcache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ipodtouch0218/NSMB-MarioVsLuigi
+          ref: ${{ env.GAME_REF }}
+          path: game
+          lfs: false
+
+      - name: Prepare project (inject NxPort, patch AppId/auth)
+        if: steps.outcache.outputs.cache-hit != 'true'
+        run: python3 unity/prepare_project.py game
+
+      - name: Restore Unity Library cache
+        if: steps.outcache.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: game/Library
+          key: ${{ steps.key.outputs.lib }}-${{ github.run_id }}
+          restore-keys: ${{ steps.key.outputs.lib }}-
+
+      - name: Build Android player (Unity)
+        if: steps.outcache.outputs.cache-hit != 'true'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: game
+          targetPlatform: Android
+          unityVersion: auto
+          buildMethod: NxPortBuild.BuildAndroid
+          buildsPath: build
+          buildName: mvlo
+          androidExportType: androidPackage
+          androidSymbolType: public
+          versioning: None
+          allowDirtyBuild: true
+          dockerMemoryLimit: 7g
+
+      - name: Resource log
+        if: always() && steps.outcache.outputs.cache-hit != 'true'
+        run: cat /tmp/resources.log || true
+
+      - name: Save Unity Library cache
+        if: always() && steps.outcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: game/Library
+          key: ${{ steps.key.outputs.lib }}-${{ github.run_id }}
+
+      - name: Collect APK + symbols
+        if: steps.outcache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          sudo chown -R "$(id -u):$(id -g)" build || true
+          find build -maxdepth 4 -type f | head -50
+          mkdir -p android-out
+          apk=$(find build -name '*.apk' | head -1)
+          test -n "$apk"
+          cp "$apk" android-out/mvlo.apk
+          sym=$(find build -name '*symbols*.zip' | head -1 || true)
+          if [ -n "$sym" ]; then cp "$sym" android-out/symbols.zip; else echo "::warning::no symbols zip produced"; fi
+          ls -la android-out
+
+      - name: Save APK cache
+        if: steps.outcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: android-out
+          key: ${{ steps.key.outputs.out }}
+
+      - name: Package SD folder
+        run: |
+          set -e
+          pip install --quiet pyelftools capstone pillow
+          sudo apt-get install -y -qq librsvg2-bin >/dev/null || true
+          bash tools/package_sd.sh android-out sd
+          du -sh sd/switch/mvlo
+
+      # PUBLIC repository: the game (its code and Nintendo assets) must not be
+      # downloadable by anyone. The SD folder and the symbols are uploaded
+      # only inside AES-256 zips whose password is the SD_ARCHIVE_PASSWORD
+      # secret (open them with 7-Zip); without the secret nothing is uploaded
+      # and the APK stays in the Actions cache only.
+      - name: Encrypt SD data + symbols
+        id: enc
+        env:
+          PW: ${{ secrets.SD_ARCHIVE_PASSWORD }}
+        run: |
+          set -e
+          if [ -z "$PW" ]; then echo "::warning::SD_ARCHIVE_PASSWORD is not set: the SD data is not uploaded"; exit 0; fi
+          command -v 7z >/dev/null || sudo apt-get install -y -qq p7zip-full >/dev/null
+          mkdir -p enc
+          (cd sd && 7z a -tzip -mem=AES256 -p"$PW" -bso0 "../enc/mvlo-sd-data-${GAME_REF}.zip" .)
+          if [ -f android-out/symbols.zip ]; then
+            (cd android-out && 7z a -tzip -mem=AES256 -p"$PW" -bso0 "../enc/mvlo-symbols-${GAME_REF}.zip" symbols.zip)
+          fi
+          ls -la enc
+          echo "ok=1" >> "$GITHUB_OUTPUT"
+
+      - name: Upload SD data (encrypted)
+        if: steps.enc.outputs.ok == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvlo-sd-data-${{ env.GAME_REF }}
+          path: enc
+          retention-days: 30
+          compression-level: 0
