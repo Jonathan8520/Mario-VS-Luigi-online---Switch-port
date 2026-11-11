@@ -306,6 +306,21 @@ artifact diff, `resolve_stall.py` to name the addresses in dumps
 with the `mvlo-symbols` artifact, heartbeat listener
 `netlog_listen.py`/`.php`).
 
+## Nov 11 — v0.1.46: Switch defaults for a new player
+
+- ✅ A player who has never saved a setting starts with **Max FPS 30**
+  (the game's "unlimited" gives an uneven 40-50 fps on the console),
+  **HUD Scale 4** (the game's 8 is large on the handheld screen) and
+  **Discord integration off** (no Discord on a Switch). An existing
+  player's saved settings are not touched; the options menu changes these
+  as usual (DECISIONS 83). Key bindings stay the game's (A/B jump, X/Y run,
+  R/ZR power-up, L/ZL reserve item).
+- ✅ Verified: emu-test on a blank SD seeds the three keys on the first
+  boot, the game saves them (`Graphics_MaxFPS 30`, `Graphics_HudScale 4`,
+  `General_DiscordIntegration 0` in prefs.kv) and the second boot reads
+  them back without seeding again. On the console, with existing settings:
+  nothing seeded, settings unchanged, clean quit.
+
 ## Nov 11 — public repository, squashed history
 
 - ✅ History rewritten into a few commits on `main` (author Jonathan8520);

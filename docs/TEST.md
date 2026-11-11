@@ -415,9 +415,11 @@ for real-valued settings are cleared automatically when it loads.
    point, or just as the game starts: `[video] loading_screen = 0`. If the
    animation stutters too much: `[video] loading_fps = 30`.
 2. **Sound and HUD**: the music should play from the title screen on (default
-   volumes 0.75 / 0.5 / 0.75), the in-game HUD should be large (HUD Scale 8).
-   Change a volume in the options, quit, relaunch: it should be kept.
-   Even bigger: `[game] hud_scale = 10` (or 12).
+   volumes 0.75 / 0.5 / 0.75). A new player starts with the Switch defaults
+   (v0.1.46): HUD Scale 4, Max FPS 30, Discord integration off (the game's
+   own are 8, unlimited and on). Change a setting in the options, quit,
+   relaunch: it should be kept. Even bigger HUD: `[game] hud_scale = 10`
+   (or 12).
 3. **Keyboard**: *Play Game* → *Nickname* field → A: the Switch keyboard
    should open; confirm (+) → the nickname changes. The game's keyboard may
    stay displayed behind it: B closes it, A reopens the Switch keyboard. Same

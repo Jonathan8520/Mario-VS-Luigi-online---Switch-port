@@ -29,8 +29,9 @@ keyboard = 1
 # 1 = let the game query GitHub for updates (needs HTTPS through Java: off)
 check_updates = 0
 
-# Force the in-game HUD size read at startup (empty = the game's own setting;
-# its slider goes 1..8, 8 = default = biggest; 10 or 12 = bigger still)
+# Force the in-game HUD size read at startup (empty = the options menu's
+# setting; its slider goes 1..8, a new player starts at 4 on Switch, 8 is the
+# biggest; 10 or 12 = bigger still)
 hud_scale =
 
 [video]

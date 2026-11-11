@@ -27,9 +27,12 @@ on:
         description: "Extra mvlo.ini lines (e.g. 'gc = disable'), \\n-separated, appended to [debug]"
         default: ""
 
+# A push that changes source/ and dist/ starts this workflow twice: on the push,
+# then again when android-build completes. Queue the second run instead of
+# cancelling the first: a cancelled run shows as a red X on the commit.
 concurrency:
   group: emu-test
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   emu:

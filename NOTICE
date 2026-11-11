@@ -1,0 +1,10 @@
+mvlo_nx -- Copyright (c) 2026 Jonathan8520, MIT License (see LICENSE).
+
+Wrapper code is derived from cloverpit_nx (MIT, see LICENSE.cloverpit_nx), itself
+built on the SoLoader lineage (badpiggies_nx, colorsheep_nx, laytonbmr_nx, vln_nx)
+and so-loader by Andy Nguyen (TheFloW), fgsfds and Rinnegatamante, all MIT. Files
+taken from those projects keep their upstream copyright notices.
+
+This repository contains NO game code or assets. NSMB Mario vs Luigi Online is by
+ipodtouch0218 and contributors (no license file upstream) and contains Nintendo
+assets; it is not covered by this license and is never redistributed here.

@@ -78,4 +78,4 @@ with the Android player of the new version (image `unityci/editor:ubuntu-<versio
   so-loader by TheOfficialFloW (Andy Nguyen), fgsfds, Rinnegatamante (MIT).
 - Tools: devkitPro / libnx / switch-mesa, game-ci, Eden (emulator tests).
 
-The wrapper code is MIT-licensed (see `LICENSE` and `LICENSE.cloverpit_nx`).
+The wrapper code is MIT-licensed (see `LICENSE`, `NOTICE` and `LICENSE.cloverpit_nx`).

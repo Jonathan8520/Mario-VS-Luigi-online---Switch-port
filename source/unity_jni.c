@@ -144,9 +144,33 @@ static void esc(FILE*f,const char*s){ for(;*s;s++){ if(*s=='\\'||*s=='\t'||*s=='
 static char *unesc(char*s){ char*o=s,*w=s; for(;*o;o++){ if(*o=='\\'&&o[1]){o++;
   *w++=(*o=='t')?'\t':(*o=='n')?'\n':*o;} else *w++=*o;} *w=0; return s; }
 
+/* Switch defaults for a new player (v0.1.46). Settings.LoadSettings() runs
+ * LoadFromVersion0 (the game's hard-coded defaults), then LoadFromVersion1,
+ * which replaces each setting whose key exists (PlayerPrefs.HasKey ->
+ * SharedPreferences.contains -> this store). Seeding the keys a player has
+ * never saved therefore changes only the starting values: the game's first
+ * SaveSettings writes them to prefs.kv, and the options menu changes them as
+ * usual. A key already saved (an existing player) is never touched. */
+static void prefs_seed_switch_defaults(void){
+  static const struct { char type; const char *key, *val, *why; } d[] = {
+    /* the game's 0 = unlimited: the console then runs at 40-50 fps, uneven */
+    { 'I', "Graphics_MaxFPS",            "30", "steady 30 fps" },
+    /* the game's 8 (the slider's maximum) is large on the handheld screen */
+    { 'F', "Graphics_HudScale",          "4",  "HUD scale 4" },
+    /* the game's 1: there is no Discord client on a Switch */
+    { 'I', "General_DiscordIntegration", "0",  "no Discord" },
+  };
+  for (unsigned i = 0; i < sizeof d / sizeof *d; i++) {
+    if (kv_get(d[i].key)) continue;
+    kv_set(d[i].type, d[i].key, d[i].val);
+    debugPrintf("[prefs] Switch default %s = %s (%s)\n", d[i].key, d[i].val, d[i].why);
+  }
+}
+
 static void prefs_load(void){
   char p[256]; FILE*f=fopen(prefs_file(p,sizeof p),"rb");
-  if(!f){ debugPrintf("[prefs] load: no save file at %s (errno=%d)\n", p, errno); return; }
+  if(!f){ debugPrintf("[prefs] load: no save file at %s (errno=%d)\n", p, errno);
+          prefs_seed_switch_defaults(); return; }
   char line[2048];
   while (fgets(line,sizeof line,f)){
     char *nl=strchr(line,'\n'); if(nl)*nl=0;
@@ -159,8 +183,9 @@ static void prefs_load(void){
   debugPrintf("[prefs] load: %d entries from %s\n", g_kv_n, p);
   /* Until v0.1.9 getFloat always answered 0 and the game saved those zeros
    * back. 0 is outside every one of these sliders (HUD Scale 1..8, volumes
-   * 0.0001..1), so a stored 0 can only be that bug: drop it and let the game
-   * fall back to its defaults (HUD Scale 8, volumes 1). */
+   * 0.0001..1), so a stored 0 can only be that bug: drop it so the default
+   * applies again (HUD Scale: the Switch default below; volumes: the game's
+   * 0.75 / 0.5 / 0.75). */
   static const char *const fkeys[] = { "Graphics_HudScale", "Audio_MasterVolume",
                                        "Audio_MusicVolume", "Audio_SFXVolume" };
   for (unsigned i = 0; i < sizeof fkeys / sizeof *fkeys; i++) {
@@ -170,6 +195,7 @@ static void prefs_load(void){
       kv_remove(fkeys[i]);
     }
   }
+  prefs_seed_switch_defaults();
 }
 static void prefs_flush(void){
   if(!g_kv_dirty){ debugPrintf("[prefs] flush: nothing dirty (%d entries)\n", g_kv_n); return; }

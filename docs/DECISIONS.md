@@ -1125,3 +1125,18 @@ Each entry: the decision, why, and how to revert it.
     history was squashed nonetheless, and pull requests from forks wait for
     approval before running the CI (otherwise they could read the cache of
     the game build).
+83. **Switch defaults for a new player (v0.1.46, Nov 11).** The game's
+    `Settings.LoadSettings()` runs `LoadFromVersion0` (hard-coded defaults:
+    Max FPS 0 = unlimited, HUD Scale 8, Discord integration on), then
+    `LoadFromVersion1`, which replaces every setting whose PlayerPrefs key
+    exists. The wrapper's prefs store (`unity_jni.c`) therefore seeds, when
+    they are missing, `Graphics_MaxFPS = 30`, `Graphics_HudScale = 4` and
+    `General_DiscordIntegration = 0`: no game code is patched, the game
+    saves these values on its first `SaveSettings`, and the options menu
+    changes them as usual. Keys already saved are never touched, so an
+    existing player keeps their settings. Why: unlimited fps runs at an
+    uneven 40-50 on the console (30 is steady, cooler and the simulation
+    speed does not depend on it); 8 is the slider's maximum and large on the
+    handheld screen (the tester plays at 4); there is no Discord on a Switch.
+    The key bindings stay the game's: they already suit a Switch controller
+    (A/B jump, X/Y run, R/ZR power-up, L/ZL reserve item).
