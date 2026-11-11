@@ -1,0 +1,19 @@
+# Pictures of the loading screen and the .nro icon, fetched at BUILD time by
+# tools/fetch_splash.py (CI). They belong to their authors (the game, its
+# itch.io page, the soundtrack cover): they are never committed here and stay
+# inside the private build artifacts.
+#
+#   kind    url
+# kinds: studio (pixel-art studio logo), title (game logo, PNG or SVG),
+#        slide (carousel, in this order), icon (the .nro icon)
+
+studio  https://raw.githubusercontent.com/ipodtouch0218/NSMB-MarioVsLuigi/refs/heads/nightly/Assets/Sprites/UI/Menu/logo.png
+title   https://raw.githubusercontent.com/ipodtouch0218/NSMB-MarioVsLuigi/refs/heads/nightly/Assets/Sprites/UI/Menu/.title-vector.svg
+
+slide   https://img.itch.zone/aW1hZ2UvMTQ0NTgzMS8yMTk5OTM4OS5wbmc=/original/yq2atV.png
+slide   https://img.itch.zone/aW1hZ2UvMTQ0NTgzMS8yMTk5OTM5MC5wbmc=/original/hW%2BHNW.png
+slide   https://img.itch.zone/aW1hZ2UvMTQ0NTgzMS8yMTk5OTM5My5wbmc=/original/FfUwRo.png
+slide   https://img.itch.zone/aW1hZ2UvMTQ0NTgzMS8yMTk5OTM5MS5wbmc=/original/MfTSNF.png
+slide   https://img.itch.zone/aW1hZ2UvMTQ0NTgzMS8yMTk5OTM5Mi5wbmc=/original/JM%2FXjG.png
+
+icon    https://nu.vgmtreasurechest.com/soundtracks/nsmb-versus-mario-vs.-luigi-2021/6bfee268bab11579d9931235961487cf.webp
