@@ -3,7 +3,7 @@
 # Lines starting with # or ; are comments.
 
 [photon]
-# YOUR OWN Photon Quantum AppId (see docs/TEST.md, "Créer son AppId Photon").
+# YOUR OWN Photon Quantum AppId (see docs/TEST.md, "Create your own Photon AppId").
 # Required for online play. Never shared, never compiled into the .nro.
 appid_quantum =
 # Optional fixed region: eu, us, usw, asia, jp, sa, kr, in, za, uae, cae ...

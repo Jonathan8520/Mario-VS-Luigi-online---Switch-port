@@ -1,22 +1,23 @@
-# Outils PC ↔ Switch (Windows)
+# PC ↔ Switch tools (Windows)
 
-Scripts utilisés pour les essais sur console : envoyer un build sur la SD,
-récupérer les logs, lire un dump de `stall.log`. Ils ne touchent qu'à
-`sdmc:/switch/mvlo/` (et lisent `atmosphere/*_reports`).
+Scripts used for console tests: send a build to the SD card, fetch the logs,
+read a `stall.log` dump. They only touch `sdmc:/switch/mvlo/` (and read
+`atmosphere/*_reports`).
 
-MTP = DBI en mode « MTP responder », vu par Windows comme
-« Périphérique USB MTP » → `1: SD Card`.
+MTP = DBI in "MTP responder" mode, which a French Windows shows as
+"Périphérique USB MTP" (USB MTP device) → `1: SD Card`. The scripts match that
+device name: adjust it for a Windows in another language.
 
 | Script | Usage |
 |---|---|
-| `mtp_push_verify.ps1 -LocalDir <dossier>\mvlo -VerifyDir <tmp>` | copie le dossier dans `switch/` (fusion, remplace), puis relit chaque fichier depuis la Switch et compare le SHA-256. Pour quelques fichiers (un `.nro`, `mvlo.ini`). |
-| `mtp_sync.ps1 -LocalDir <dossier>\mvlo -StageRoot <tmp>` | n'envoie que les fichiers absents ou de mauvaise taille, reprend après une déconnexion. Pour le jeu de données complet (~1 585 fichiers, ~80-100 fichiers/min). |
-| `mtp_pull.ps1 -OutDir <tmp> [-RecentHours 1]` | rapatrie `*.log` et `*.ini` de `switch/mvlo/` et les rapports Atmosphère récents. |
-| `ftp_upload.py HOST PORT /switch/mvlo <dossier>...` | même chose par FTP (ftpd/sys-ftpd), avec reprise ; sous Git Bash, `MSYS_NO_PATHCONV=1`. |
-| `sbb.py <commande>` | pilote la console via le module sys-botbase (TCP 6000) : `click A`, `seq "DDOWN,W200,A"`, `shot out.jpg` (capture d'écran), `ping` (répond-il encore ? utile pendant un gel : il tombe avec le réseau de toute la console). Adresse en dur en tête du script. |
-| `prof_report.py prof.log mvlo_nx.elf syms/arm64-v8a [MIN_MS]` | classe où le jeu passe chaque image lente notée par le profileur (`[debug] prof_ms`) : par thread (UnityMain, chargeurs), fonctions « self » et sur la pile, chaînes d'appel. `syms/` = l'artifact CI `mvlo-symbols` dézippé (`libunity.so`, `libil2cpp.so`) ; l'`.elf` doit être celui du même build. |
-| `classify_threads.py stall.log mvlo_nx.elf N` | chaîne d'appels de chaque thread du dump `STALL #N` (adresses `NRO+0x…` résolues avec l'`.elf` **du même build**). |
+| `mtp_push_verify.ps1 -LocalDir <folder>\mvlo -VerifyDir <tmp>` | copies the folder into `switch/` (merge, replace), then reads every file back from the Switch and compares the SHA-256. For a few files (a `.nro`, `mvlo.ini`). |
+| `mtp_sync.ps1 -LocalDir <folder>\mvlo -StageRoot <tmp>` | sends only missing files or files with the wrong size, resumes after a disconnection. For the full data set (~1,585 files, ~80-100 files/min). |
+| `mtp_pull.ps1 -OutDir <tmp> [-RecentHours 1]` | brings back `*.log` and `*.ini` from `switch/mvlo/` and the recent Atmosphère reports. |
+| `ftp_upload.py HOST PORT /switch/mvlo <folder>...` | the same over FTP (ftpd/sys-ftpd), with resume; under Git Bash, `MSYS_NO_PATHCONV=1`. |
+| `sbb.py <command>` | drives the console through the sys-botbase module (TCP 6000): `click A`, `seq "DDOWN,W200,A"`, `shot out.jpg` (screenshot), `ping` (is it still answering? useful during a freeze: it goes down with the whole console's network). Address hard-coded at the top of the script. |
+| `prof_report.py prof.log mvlo_nx.elf syms/arm64-v8a [MIN_MS]` | ranks where the game spends each slow frame recorded by the profiler (`[debug] prof_ms`): per thread (UnityMain, loaders), "self" and on-stack functions, call chains. `syms/` = `mvlo-symbols-*.zip` from the encrypted `mvlo-sd-data-*` CI artifact, unzipped (`libunity.so`, `libil2cpp.so`); the `.elf` must come from the same build. |
+| `classify_threads.py stall.log mvlo_nx.elf N` | call chain of every thread in the `STALL #N` dump (`NRO+0x…` addresses resolved with the `.elf` **of the same build**). |
 
-Pièges MTP : `FolderItem.Size` vaut 0 (lire `ExtendedProperty('System.Size')`) ;
-`CopyHere` est asynchrone et meurt avec le processus qui l'a lancé ; deux
-`.nro` différents peuvent avoir exactement la même taille (d'où le SHA-256).
+MTP pitfalls: `FolderItem.Size` is 0 (read `ExtendedProperty('System.Size')`);
+`CopyHere` is asynchronous and dies with the process that started it; two
+different `.nro` files can have exactly the same size (hence the SHA-256).

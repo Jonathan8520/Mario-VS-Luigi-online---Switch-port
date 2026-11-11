@@ -1,508 +1,509 @@
-# Tester mvlo_nx sur ta Switch
+# Testing mvlo_nx on your Switch
 
-> Prérequis : Switch avec CFW (Atmosphère) et hbmenu. Les manipulations
-> ci-dessous ne touchent qu'au dossier `sdmc:/switch/mvlo/`.
+> Requirements: a Switch with CFW (Atmosphère) and hbmenu. The steps below
+> only touch the `sdmc:/switch/mvlo/` folder.
 
-## 1. Récupérer les fichiers (GitHub → onglet *Actions*)
+## 1. Get the files (GitHub → *Actions* tab)
 
-Deux artifacts, tous deux sur la branche `main` :
+Two artifacts, both from the `main` branch:
 
-| Workflow | Artifact | Contenu |
+| Workflow | Artifact | Contents |
 |---|---|---|
-| **nro** (dernier run vert) | `mvlo_nx-nro` | `switch/mvlo/mvlo_nx.nro` + `mvlo.ini.example` |
-| **android-build** (dernier run vert) | `mvlo-sd-data-v2.2.0.1` | `mvlo-sd-data-v2.2.0.1.zip` **chiffré** : `switch/mvlo/` avec les `.so` du jeu, `assets/`, `BUILDINFO.txt` |
+| **nro** (latest green run) | `mvlo_nx-nro` | `switch/mvlo/mvlo_nx.nro` + `mvlo.ini.example` |
+| **android-build** (latest green run) | `mvlo-sd-data-v2.2.0.1` | **encrypted** `mvlo-sd-data-v2.2.0.1.zip`: `switch/mvlo/` with the game's `.so` files, `assets/`, `BUILDINFO.txt` |
 
-Le dépôt est public mais le jeu ne doit pas l'être : ses données sont dans un
-zip AES-256 dont le mot de passe est le secret `SD_ARCHIVE_PASSWORD` du dépôt
-(sans ce secret, le workflow ne publie rien). L'Explorateur Windows ne sait pas
-ouvrir ce chiffrement : utiliser **7-Zip**.
+The repository is public but the game must not be: its data is in an
+AES-256 zip whose password is the repository's `SD_ARCHIVE_PASSWORD` secret
+(without this secret, the workflow publishes nothing). Windows Explorer cannot
+open this encryption: use **7-Zip**.
 
-Dézippe les deux **dans le même dossier** : ils se complètent.
+Unzip both **into the same folder**: they complement each other.
 
-## 2. Copier sur la carte SD
+## 2. Copy to the SD card
 
 ```
 sdmc:/switch/mvlo/
 ├── mvlo_nx.nro
-├── mvlo.ini                    ← créé automatiquement au 1er lancement (voir §4)
+├── mvlo.ini                    ← created automatically on first launch (see §4)
 ├── libmain.so
 ├── libunity.so
 ├── libil2cpp.so
-├── lib_burst_generated.so      ← seulement s'il est présent dans l'artifact
-├── BUILDINFO.txt  IMPORTS_CHECK.txt  IL2CPP_INFO.txt   (diagnostic, petits)
-├── il2cpp/                     ← copie pré-extraite de Managed/ (+ unity.ver)
+├── lib_burst_generated.so      ← only if it is present in the artifact
+├── BUILDINFO.txt  IMPORTS_CHECK.txt  IL2CPP_INFO.txt   (diagnostics, small)
+├── il2cpp/                     ← pre-extracted copy of Managed/ (+ unity.ver)
 └── assets/
     └── bin/Data/
         ├── boot.config
         ├── globalgamemanagers, level0…, sharedassets…, resources.assets
-        │   (ou un seul data.unity3d selon la compression du build)
+        │   (or a single data.unity3d, depending on the build's compression)
         ├── Managed/Metadata/global-metadata.dat
-        └── ... (tout le reste du dossier assets/)
+        └── ... (everything else in the assets/ folder)
 ```
 
-Le nom du dossier n'est pas imposé (le .nro cherche ses fichiers à côté de
-lui), mais `sdmc:/switch/mvlo/` est celui documenté partout.
+The folder name is not mandatory (the .nro looks for its files next to
+itself), but `sdmc:/switch/mvlo/` is the one documented everywhere.
 
-## 3. Lancer
+## 3. Launch
 
-**Obligatoire : mode *title takeover*** (mémoire complète). Lance un jeu
-installé quelconque **en maintenant R**, hbmenu s'ouvre à la place du jeu,
-puis choisis *Mario vs Luigi Online*.
+**Required: *title takeover* mode** (full memory). Launch any installed
+game **while holding R**: hbmenu opens instead of the game, then pick
+*Mario vs Luigi Online*.
 
-- Ne **pas** lancer depuis l'Album (mode applet : ~400 Mo seulement, le jeu
-  n'aura pas assez de mémoire ; le log le signale : `APPLET MODE`).
-- Ne pas utiliser de forwarder NRO/NSP : sur le port PvZ Fusion du même
-  lignage, ils plantent faute de permissions de mapping mémoire.
-- Démarrage : compter ~30–40 s d'écran fixe (chargement depuis la SD) avant
-  l'intro. Sans le dossier `il2cpp/` (anciens artifacts, avant la v0.1.1),
-  Unity le recrée lui-même au premier lancement : ~1 min 45 de plus, une
-  seule fois.
-- Si vous mettez à jour les données du jeu, recopiez **tout** le dossier
-  (y compris `il2cpp/`).
+- Do **not** launch from the Album (applet mode: only ~400 MB, the game
+  won't have enough memory; the log reports it: `APPLET MODE`).
+- Do not use an NRO/NSP forwarder: on the PvZ Fusion port from the same
+  lineage, they crash for lack of memory-mapping permissions.
+- Startup: expect ~30–40 s of a still screen (loading from the SD card)
+  before the intro. Without the `il2cpp/` folder (old artifacts, before
+  v0.1.1), Unity recreates it itself on first launch: ~1 min 45 s more, only
+  once.
+- If you update the game data, copy the **whole** folder again
+  (including `il2cpp/`).
 
-Commandes : manette normale (Joy-Con, Pro Controller, jusqu'à 4).
-A = valider, B = retour (disposition « nintendo » ; `ab_layout = xbox` pour
-l'inverse). Le tactile fonctionne dans les menus. Saut = A/B, course = X/Y,
-pouvoir = R/ZR, réserve = L/ZL, + = pause, − = scores.
+Controls: regular controllers (Joy-Con, Pro Controller, up to 4).
+A = confirm, B = back ("nintendo" layout; `ab_layout = xbox` for the
+opposite). Touch works in the menus. Jump = A/B, run = X/Y,
+power-up = R/ZR, reserve = L/ZL, + = pause, − = scores.
 
-## 4. Configurer `mvlo.ini` (et l'AppId Photon)
+## 4. Configure `mvlo.ini` (and the Photon AppId)
 
-Au premier lancement, `sdmc:/switch/mvlo/mvlo.ini` est créé avec les valeurs
-par défaut (copie de `mvlo.ini.example`). Pour jouer **en ligne**, il faut
-**ton propre AppId Photon Quantum** — aucun AppId n'est intégré au port.
+On first launch, `sdmc:/switch/mvlo/mvlo.ini` is created with the default
+values (a copy of `mvlo.ini.example`). To play **online**, you need
+**your own Photon Quantum AppId** — no AppId is built into the port.
 
-### Créer son AppId Photon (gratuit, 5 min)
+### Create your own Photon AppId (free, 5 min)
 
-1. Crée un compte sur <https://dashboard.photonengine.com> (offre gratuite :
-   20 joueurs simultanés, largement suffisant).
-2. *Create a new app* → **Application Type : Quantum** → **Photon SDK :
-   Quantum 3** (le jeu utilise Quantum 3) → donne un nom → *Create*.
-3. Dans la liste des applications, copie l'**App ID** (un GUID du type
+1. Create an account at <https://dashboard.photonengine.com> (free plan:
+   20 concurrent players, more than enough).
+2. *Create a new app* → **Application Type: Quantum** → **Photon SDK:
+   Quantum 3** (the game uses Quantum 3) → give it a name → *Create*.
+3. In the list of applications, copy the **App ID** (a GUID like
    `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).
-4. Édite `sdmc:/switch/mvlo/mvlo.ini` :
+4. Edit `sdmc:/switch/mvlo/mvlo.ini`:
    ```ini
    [photon]
    appid_quantum = xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
    ```
-5. Facultatif : `fixed_region = eu` pour forcer l'Europe.
+5. Optional: `fixed_region = eu` to force Europe.
 
-⚠ Limite à connaître : on ne voit que les joueurs qui utilisent **le même
-AppId et la même version du jeu**. Les versions PC/Web officielles utilisent
-l'AppId officiel : pas de jeu croisé avec elles (il faudrait une version PC
-compilée avec ton AppId). Entre deux Switch avec ce port et ton AppId : oui.
-**Sans AppId, on ne peut pas jouer** : le jeu n'a pas de mode hors-ligne,
-même une partie seul passe par une salle Photon. Le menu *Play Game* reste
-alors bloqué sur « Connecting… » (B pour revenir) et le log affiche
+⚠ A limit to know about: you only see players who use **the same AppId and
+the same version of the game**. The official PC/Web versions use the
+official AppId: no cross-play with them (that would take a PC version built
+with your AppId). Between two Switches with this port and your AppId: yes.
+**Without an AppId, you cannot play**: the game has no offline mode, even a
+solo game goes through a Photon room. The *Play Game* menu then stays stuck
+on "Connecting…" (B to go back) and the log shows
 `photon.appid_quantum missing`.
 
-Ne partage pas ton `mvlo.ini` publiquement (il contient ton AppId) ; le
-`debug.log` le masque (`(set, hidden)`).
+Don't share your `mvlo.ini` publicly (it contains your AppId);
+`debug.log` masks it (`(set, hidden)`).
 
-## 4 sexdecies. v0.1.45 : chat du salon (09/11)
+## 4 sexdecies. v0.1.45: room chat (Nov 9)
 
-> Toucher la case « Entrez du texte… » ouvre le clavier Switch ; **OK envoie
-> le message** (plus besoin de toucher « Envoyer »). « Envoyer » reste utile
-> si du texte attend dans la case, et n'ouvre plus le clavier. À la manette,
-> la case n'est toujours pas atteignable (scène du jeu).
+> Touching the "Enter text…" box opens the Switch keyboard; **OK sends the
+> message** (no need to touch "Send" anymore). "Send" is still useful if
+> some text is waiting in the box, and no longer opens the keyboard. With a
+> controller, the box still can't be reached (the game's scene).
 
-## 4 quindecies. v0.1.44 : longues sessions en ligne (09/11)
+## 4 quindecies. v0.1.44: long online sessions (Nov 9)
 
-> Rien à régler. La ligne `[mem]` de `debug.log` finit par `threads: N
-> created, M reaped, J joined, F failed | rl: thr X/96 …`. `X` doit rester
-> stable pendant une longue session (vers 65-70) ; `failed` doit rester à 0.
-> Si une création échoue, une ligne `[thr] pthread_create failed` l'écrit.
+> Nothing to set. The `[mem]` line in `debug.log` ends with `threads: N
+> created, M reaped, J joined, F failed | rl: thr X/96 …`. `X` should stay
+> stable during a long session (around 65-70); `failed` should stay at 0.
+> If a creation fails, a `[thr] pthread_create failed` line records it.
 
-## 4 quaterdecies. v0.1.43 : plantage au lancement (08/11)
+## 4 quaterdecies. v0.1.43: crash at launch (Nov 8)
 
-> Rien à régler. `stall.log` ne contient plus de « STALL #1 » à chaque
-> lancement (le chargement des frames 0-1 a droit à 20 s). Si le watchdog
-> plante un jour, `stall.log` finit par `[crash] fault inside the watchdog:
-> the watchdog stops, the game carries on` et le jeu continue.
+> Nothing to set. `stall.log` no longer contains a "STALL #1" at every
+> launch (loading frames 0-1 is allowed 20 s). If the watchdog ever
+> crashes, `stall.log` ends with `[crash] fault inside the watchdog:
+> the watchdog stops, the game carries on` and the game continues.
 
-## 4 terdecies. v0.1.42 : cache des replays, logs plafonnés (05/11)
+## 4 terdecies. v0.1.42: replay cache, capped logs (Nov 5)
 
-> Rien à régler. À chaque fin de partie, `debug.log` dit d'où viennent les
-> infos des replays : `[io] replays stats since the last save: 22 from the
-> cache, 3 from the card in … ms` (beaucoup plus « from the card » à la
-> première de la session, c'est normal). Au lancement, `stall.log` et
-> `prof.log` de plus de 1 Mo deviennent `stall.prev.log` / `prof.prev.log`.
+> Nothing to set. At the end of each game, `debug.log` says where the
+> replay info comes from: `[io] replays stats since the last save: 22 from the
+> cache, 3 from the card in … ms` (many more "from the card" on the first
+> game of the session, that's normal). At launch, a `stall.log` or
+> `prof.log` over 1 MB becomes `stall.prev.log` / `prof.prev.log`.
 
-## 4 duodecies. v0.1.41 : fin de partie (05/11)
+## 4 duodecies. v0.1.41: end of game (Nov 5)
 
-> Rien à régler. Dans `debug.log`, à la première fin de partie : `[io]
-> write-behind on`, puis `[io] write-behind: …Replay-….mvlreplay, N KB from
-> 3 writes, written+closed+committed in … ms`. À vérifier en vraie partie :
-> le petit gel quand une partie se termine (surtout les suivantes), et que
-> les replays s'ouvrent dans le menu « Replays ». En cas de doute :
-> `[io] write_behind = 0` (comportement d'avant). Voir DECISIONS 78.
+> Nothing to set. In `debug.log`, at the first end of a game: `[io]
+> write-behind on`, then `[io] write-behind: …Replay-….mvlreplay, N KB from
+> 3 writes, written+closed+committed in … ms`. To check in a real game:
+> the small freeze when a game ends (especially the later ones), and that
+> the replays open in the "Replays" menu. If in doubt:
+> `[io] write_behind = 0` (previous behavior). See DECISIONS 78.
 
-## 4 undecies. v0.1.40 : à-coups en partie et mémoire (04/11)
+## 4 undecies. v0.1.40: in-game stutters and memory (Nov 4)
 
-> Rien à régler. Les lignes `oc_pool_mb = 448` / `gpu_arena_mb = 256`
-> ajoutées au `mvlo.ini` le 03/11 sont désormais les valeurs par défaut (les
-> garder ne change rien). Dans `debug.log` au démarrage : `[log] writer thread
-> started` et `[patch] CreateZStream deflate level applied`. Si la réserve OC
-> grandit : `[oc] commit-pool grown by 32 MB` (normal, plus de plantage).
-> À vérifier en vraie partie publique : plus d'à-coup pendant le jeu, fin de
-> partie (sauvegarde du replay) ~0,35 s au lieu de 0,5-0,7 s. Pour comparer :
-> `[debug] zlib_level = 0` (niveau d'origine). Voir DECISIONS 72-74.
+> Nothing to set. The `oc_pool_mb = 448` / `gpu_arena_mb = 256` lines
+> added to `mvlo.ini` on Nov 3 are now the default values (keeping them
+> changes nothing). In `debug.log` at startup: `[log] writer thread
+> started` and `[patch] CreateZStream deflate level applied`. If the OC
+> reserve grows: `[oc] commit-pool grown by 32 MB` (normal, no more crash).
+> To check in a real public game: no more stutters during play, end of
+> game (replay save) ~0.35 s instead of 0.5-0.7 s. To compare:
+> `[debug] zlib_level = 0` (original level). See DECISIONS 72-74.
 >
-> **Résultat (04→05/11).** 52 min en ligne, Jungle comprise : aucun plantage,
-> 30 i/s stables. « Quitter » revient maintenant à l'accueil sans le message
-> « … une erreur est survenue » (DECISIONS 77) ; s'il revient, noter l'heure
-> et récupérer `atmosphere/crash_reports/` (rapports au nom de l'icône qui a
-> lancé le jeu).
+> **Result (Nov 4→5).** 52 min online, Jungle included: no crash, steady
+> 30 fps. "Quit" now returns to the HOME menu without the "… an error
+> occurred" message (DECISIONS 77); if it comes back, note the time and
+> grab `atmosphere/crash_reports/` (reports named after the icon that
+> launched the game).
 
-## 4 decies. v0.1.37 : à-coups des premières fois (02/11 soir)
+## 4 decies. v0.1.37: first-time stutters (Nov 2, evening)
 
-> Rien à régler : préchargement (`[io] preload_kb = 1024`), descripteurs
-> fantômes (`[io] phantom_fds = 1`, v0.1.38) et envois UDP asynchrones
-> (`[net] async_send = 1`) sont actifs par défaut. Jouer avec les joueurs du
-> site : `[photon] build_identifier = official`. Sur le menu
-> principal, laisser ~10 s au préchargement (`[io] preload: … read in 7 s`
-> dans debug.log) avant d'entrer dans « Jouer ». Pour mesurer : `[debug]
-> prof_ms = 150` puis `tools/switch/prof_report.py` sur `prof.log` (voir
-> DECISIONS 65-67). Créer les parties en **salon privé**.
+> Nothing to set: preloading (`[io] preload_kb = 1024`), phantom
+> descriptors (`[io] phantom_fds = 1`, v0.1.38) and asynchronous UDP sends
+> (`[net] async_send = 1`) are on by default. To play with the players from
+> the website: `[photon] build_identifier = official`. On the main
+> menu, give the preload ~10 s (`[io] preload: … read in 7 s`
+> in debug.log) before going into "Play". To measure: `[debug]
+> prof_ms = 150` then `tools/switch/prof_report.py` on `prof.log` (see
+> DECISIONS 65-67). Create games as a **private room**.
 
-## 4 nonies. v0.1.30 : le gel en ligne est corrigé (02/11)
+## 4 nonies. v0.1.30: the online freeze is fixed (Nov 2)
 
-> **Résultat.** La cause était `/dev/urandom` émulé par un fichier de 64 Ko
-> qui s'épuisait vers ~400 s de connexion (DECISIONS 63). Avec la v0.1.30,
-> « Jouer » 11 min 40 sans gel. Il ne reste qu'à confirmer sur **un vrai match
-> de plus de 7 minutes** ; aucun réglage `[net]` n'est nécessaire. Les essais
-> de la section 4 octies ci-dessous sont caducs.
+> **Result.** The cause was `/dev/urandom` emulated by a 64 KB file that
+> ran out after ~400 s of connection (DECISIONS 63). With v0.1.30,
+> "Play" ran 11 min 40 s without a freeze. All that's left is to confirm on
+> **a real match longer than 7 minutes**; no `[net]` setting is needed. The
+> tests in section 4 octies below are obsolete.
 
-## 4 octies. Essai de la v0.1.27 : mesurer puis corriger le gel en ligne
+## 4 octies. Testing v0.1.27: measure, then fix the online freeze
 
-> **30/10, session cloud.** Recherche (DECISIONS 58, 61) : **aucun événement
-> Photon à ~400 s** (ses timers sont ≤ 60 s ou = 1 h) → le gel vient très
-> probablement de la **pile réseau de la console** sur notre socket UDP
-> connectée de longue durée. `bsdsocket` héberge bsd **et le DNS** ; nifm
-> dépend de lui → « bsd tombe d'abord, puis nifm ». Analogue documenté :
-> **sys-ftpd #30**, épuisement de tampons (`ENOBUFS`) → « hangs the system ».
-> Depuis 18.0.0, **15 sessions `bsd:u` pour toute la console**.
+> **Oct 30, cloud session.** Research (DECISIONS 58, 61): **no Photon event
+> at ~400 s** (its timers are ≤ 60 s or = 1 h) → the freeze most likely
+> comes from the **console's network stack** on our long-lived connected
+> UDP socket. `bsdsocket` hosts bsd **and DNS**; nifm depends on it →
+> "bsd goes down first, then nifm". Documented analogue:
+> **sys-ftpd #30**, buffer exhaustion (`ENOBUFS`) → "hangs the system".
+> Since 18.0.0, **15 `bsd:u` sessions for the whole console**.
 >
-> La v0.1.27 ajoute la **répartition des errno bsd** (battement + autopsie :
-> `err: ENOBUFS=N …`) — surveiller si `ENOBUFS` monte avant le gel — et trois
-> **correctifs candidats** (ci-dessous). **Lancement toujours en title
-> takeover (applet type 0)** : l'essai « mode applet » est sans objet, retiré.
+> v0.1.27 adds the **bsd errno breakdown** (heartbeat + autopsy:
+> `err: ENOBUFS=N …`) — watch whether `ENOBUFS` climbs before the freeze —
+> and three **candidate fixes** (below). **Still launching in title
+> takeover (applet type 0)**: the "applet mode" test is moot, removed.
 
-Copier seulement `mvlo_nx-nro` (pas d'android-build). Garder `mvlo.ini` et
-`[debug] netlog` avec l'écoute PC. Les lignes ajoutées vont sous **`[debug]`**
-ou **`[net]`** comme indiqué ; les remettre comme avant après chaque essai.
-**L'écran « Jouer » seul (liste des salons, sans jouer) reproduit le gel en
-6 min 40** : inutile de lancer un match. Mesures d'abord (1-2), puis les
-correctifs (a-c), chacun ≤ 8 min.
+Copy only `mvlo_nx-nro` (no android-build). Keep `mvlo.ini` and
+`[debug] netlog` with the PC listener. The added lines go under **`[debug]`**
+or **`[net]`** as indicated; set them back as before after each test.
+**The "Play" screen alone (room list, without playing) reproduces the freeze
+in 6 min 40 s**: no need to start a match. Measurements first (1-2), then the
+fixes (a-c), each ≤ 8 min.
 
-**Essai 1 — le plus décisif : trafic façon Photon SANS Photon (`udp_soak`).**
-Dit si c'est la pile réseau de la console ou Photon.
-- Sur le PC, lancer l'écho UDP (le pare-feu Windows laisse passer php-cgi) :
-  `php tools/switch/udp_echo.php 9998 udp_soak.txt` (ou
+**Test 1 — the most decisive: Photon-like traffic WITHOUT Photon (`udp_soak`).**
+Tells whether it's the console's network stack or Photon.
+- On the PC, start the UDP echo (Windows Firewall lets php-cgi through):
+  `php tools/switch/udp_echo.php 9998 udp_soak.txt` (or
   `php-cgi -q -d max_execution_time=0 -f tools/switch/udp_echo.php 9998 udp_soak.txt`).
-- Dans `mvlo.ini`, sous `[debug]` : `udp_soak = <IP du PC sur le réseau>:9998`.
-- Lancer le jeu et **rester sur le MENU PRINCIPAL** (ne pas aller dans
-  « Jouer »), manette posée, ~10 min. Le PC doit afficher ~20 paquets/s.
-- **Résultat :** gel sur le menu principal après ~400 s = **c'est la pile
-  réseau de la console** (notre socket UDP connectée + poll 5 ms), pas Photon.
-  Pas de gel en 10 min = le motif socket seul ne suffit pas (cause propre à
-  Photon, ou à l'état nifm d'une vraie connexion).
-- **Variante**, seulement si l'essai 1 ne gèle pas : ajouter
-  `udp_soak_connect = 0` (socket non connectée, `sendto`) et refaire. Dit si
-  c'est le fait que la socket soit *connectée* (`connect`+`send`) qui compte.
-- Envoyer `debug.log` et `udp_soak.txt` (l'heure PC de la dernière ligne date
-  le gel).
+- In `mvlo.ini`, under `[debug]`: `udp_soak = <PC IP on the network>:9998`.
+- Start the game and **stay on the MAIN MENU** (don't go into
+  "Play"), controller put down, ~10 min. The PC should show ~20 packets/s.
+- **Result:** a freeze on the main menu after ~400 s = **it's the console's
+  network stack** (our connected UDP socket + 5 ms poll), not Photon.
+  No freeze in 10 min = the socket pattern alone is not enough (a cause
+  specific to Photon, or to the nifm state of a real connection).
+- **Variant**, only if test 1 doesn't freeze: add
+  `udp_soak_connect = 0` (unconnected socket, `sendto`) and run it again.
+  Tells whether what matters is the socket being *connected* (`connect`+`send`).
+- Send `debug.log` and `udp_soak.txt` (the PC time of the last line dates
+  the freeze).
 
-**Essai 2 (mesure) — capturer le fil au gel + guetter l'épuisement
+**Test 2 (measurement) — capture the wire at the freeze + watch for exhaustion
 (`photon_ring`).**
-- Dans `mvlo.ini`, sous `[debug]` : `photon_ring = 1`.
-- Écran « Jouer » seul jusqu'au gel (~6 min 40), manette posée.
-- **Résultat :** l'autopsie contient « last Photon datagrams » (les ~30 s avant
-  le gel : sens, taille, 16 premiers octets) et « bsd errno breakdown ». Dans
-  les battements, guetter `err: ENOBUFS=…` : s'il **monte** avant le gel, c'est
-  un épuisement de tampons (piste sys-ftpd). Envoyer `autopsy.log` + l'écoute PC.
+- In `mvlo.ini`, under `[debug]`: `photon_ring = 1`.
+- The "Play" screen alone until the freeze (~6 min 40 s), controller put down.
+- **Result:** the autopsy contains "last Photon datagrams" (the ~30 s before
+  the freeze: direction, size, first 16 bytes) and "bsd errno breakdown". In
+  the heartbeats, watch for `err: ENOBUFS=…`: if it **climbs** before the
+  freeze, it's buffer exhaustion (the sys-ftpd lead). Send `autopsy.log` +
+  the PC listener's output.
 
-### Correctifs candidats (un par partie « Jouer » seul, ≤ 8 min, sous `[net]`)
+### Candidate fixes (one per "Play"-only session, ≤ 8 min, under `[net]`)
 
-Chacun est à `0`/absent par défaut. Si un correctif **supprime ou recule
-nettement** le gel, on tient une piste ; sinon on l'élimine. Toujours renvoyer
-`debug.log` (+ `autopsy.log` si gel) en notant le réglage.
+Each one is `0`/absent by default. If a fix **removes or clearly delays**
+the freeze, we have a lead; otherwise we rule it out. Always send back
+`debug.log` (+ `autopsy.log` if it froze), noting the setting.
 
-**a) `chiaki_cfg = 1` — config socket de chiaki-ng.** Gros tampons UDP
-(256 Ko), `sb_efficiency 8`, jusqu'à 16 sessions bsd (repli automatique si la
-console refuse : regarde la ligne `[net] BSD sockets up … N bsd sessions`).
-- **Résultat :** plus de gel / gel bien plus tard = manque de tampons/sessions
-  (épuisement). Gel identique à ~400 s = ce n'est pas le dimensionnement.
+**a) `chiaki_cfg = 1` — chiaki-ng's socket config.** Large UDP buffers
+(256 KB), `sb_efficiency 8`, up to 16 bsd sessions (automatic fallback if the
+console refuses: look at the `[net] BSD sockets up … N bsd sessions` line).
+- **Result:** no more freeze / freeze much later = not enough
+  buffers/sessions (exhaustion). Same freeze at ~400 s = it's not the sizing.
 
-**b) `udp_unconnected = 1` — ne pas connecter la socket UDP au niveau bsd.**
-On garde le pair et on fait `sendto`/`recvfrom` filtré ; Photon n'y voit rien.
-- **Résultat :** plus de gel = c'est bien une socket UDP **connectée** de longue
-  durée qui pourrit dans bsdsocket (la piste la plus probable). Gel identique =
-  ce n'est pas le fait d'être connecté. (Si Photon ne se connecte plus du tout,
-  me le dire : le filtrage du pair serait trop strict.)
+**b) `udp_unconnected = 1` — don't connect the UDP socket at the bsd level.**
+We keep the peer and do a filtered `sendto`/`recvfrom`; Photon notices nothing.
+- **Result:** no more freeze = it really is a long-lived **connected** UDP
+  socket rotting in bsdsocket (the most likely lead). Same freeze =
+  it's not about being connected. (If Photon no longer connects at all,
+  tell me: the peer filtering would be too strict.)
 
-**c) `photon_rebind_s = 350` — socket neuve avant ~400 s.** À 350 s, une socket
-UDP fraîche remplace l'ancienne sous le même fd (nouveau port source). **Risque
-connu : Photon peut voir un nouveau flux et se déconnecter (~10 s après).**
-Lancer avec `photon_ring = 1`.
-- **Résultat :** si la console **ne gèle pas** à ~400 s (même si Photon se
-  déconnecte) = le gel est lié à la durée de vie d'UNE socket bsd → une
-  rotation périodique serait un contournement. Si ça gèle quand même = la durée
-  de vie de la socket n'est pas le facteur. Si Photon tient bon après le
-  changement de port, c'est un bonus (rotation viable comme vrai correctif).
+**c) `photon_rebind_s = 350` — a new socket before ~400 s.** At 350 s, a fresh
+UDP socket replaces the old one under the same fd (new source port). **Known
+risk: Photon may see a new flow and disconnect (~10 s later).**
+Run it with `photon_ring = 1`.
+- **Result:** if the console **doesn't freeze** at ~400 s (even if Photon
+  disconnects) = the freeze is tied to the lifetime of ONE bsd socket → a
+  periodic rotation would be a workaround. If it freezes anyway = the
+  socket's lifetime is not the factor. If Photon holds up after the port
+  change, that's a bonus (rotation viable as a real fix).
 
-**Réglage complémentaire — sessions `bsd:u` (A/B).** `bsd_sessions = 1` puis
-`bsd_sessions = 8`. Si `1` retarde le gel et `8` l'aggrave = pression sur les
-15 sessions partagées.
+**Extra setting — `bsd:u` sessions (A/B).** `bsd_sessions = 1` then
+`bsd_sessions = 8`. If `1` delays the freeze and `8` makes it worse =
+pressure on the 15 shared sessions.
 
-Ordre conseillé : **1 → 2 → a → b → c**. L'essai 1 tranche pile-réseau / Photon ;
-l'essai 2 montre l'épuisement éventuel ; **b** est le correctif le plus probable.
+Suggested order: **1 → 2 → a → b → c**. Test 1 settles network stack / Photon;
+test 2 shows any exhaustion; **b** is the most likely fix.
 
-## 4 septies. Essai de la v0.1.23 : mesures et essais A/B du gel en ligne
+## 4 septies. Testing v0.1.23: measurements and A/B tests of the online freeze
 
-> **Fait le 29/10 (v0.1.23 → v0.1.25, session locale), voir STATUS « le gel
-> cerné ».** Référence et B faits (B sans effet) ; A et D abandonnés (17
-> requêtes mappées sur 162 000 ; les polls de 5 ms viennent de Photon, pas
-> du découpage). C non fait. À la place : flood sur le menu (pas de gel),
-> écran « Jouer » seul (gel à 396 s connecté), déconnexion/reconnexion
-> (compte cumulé), `local_wait` (gel à 409 s).
+> **Done on Oct 29 (v0.1.23 → v0.1.25, local session), see STATUS "the
+> freeze narrowed down".** Reference and B done (B had no effect); A and D
+> dropped (17 mapped requests out of 162,000; the 5 ms polls come from
+> Photon, not from the slicing). C not done. Instead: flood on the menu (no
+> freeze), the "Play" screen alone (freeze at 396 s connected),
+> disconnect/reconnect (cumulative count), `local_wait` (freeze at 409 s).
 
-Copier seulement `mvlo_nx-nro` (pas d'android-build). Garder `mvlo.ini` et
-`[debug] netlog` avec l'écoute PC.
+Copy only `mvlo_nx-nro` (no android-build). Keep `mvlo.ini` and
+`[debug] netlog` with the PC listener.
 
-1. **Partie de référence, réglages par défaut**, jusqu'au gel (~7 min en
-   ligne). Envoyer `autopsy.log`, `debug.log` et le fichier de l'écoute PC.
-   Ce qu'il me faut :
-   - dans les battements, `bsd: N req (M mapped ...)` et, toutes les 2 s,
-     `rl: thr .. ev .. tmem .. sess ..` : est-ce qu'un compteur monte
-     régulièrement jusqu'au gel ?
-   - la ligne `[net] BSD sockets up ... bsd pointer buffer 0x....` et, si
-     elle apparaît, `[net] FIONREAD refused by bsd ...` ;
-   - dans `autopsy.log`, le tableau « bsd requests per command » et les 128
-     dernières opérations.
-2. **Essais A/B**, un par partie, chacun jusqu'au gel ou 15 min en ligne
-   sans gel. Mettre la ligne sous `[net]` dans `mvlo.ini`, puis la remettre
-   comme avant :
-   - A : `small_ipc = 1` (aucune requête réseau mappée) ;
-   - B : `socket_config = 1` (tampons libnx par défaut) ;
-   - C : `bsd_sessions = 6` ;
-   - D : `poll_slice_ms = 0` (beaucoup moins de requêtes par seconde) ;
-   Pour chaque essai : gel oui/non, après combien de secondes en ligne, et
-   le compteur `bsd: N req` au gel. Si D retarde nettement le gel, c'est le
-   nombre d'appels ; si rien ne bouge, c'est une durée.
+1. **Reference game, default settings**, until the freeze (~7 min
+   online). Send `autopsy.log`, `debug.log` and the PC listener's file.
+   What I need:
+   - in the heartbeats, `bsd: N req (M mapped ...)` and, every 2 s,
+     `rl: thr .. ev .. tmem .. sess ..`: does any counter climb
+     steadily until the freeze?
+   - the `[net] BSD sockets up ... bsd pointer buffer 0x....` line and, if
+     it appears, `[net] FIONREAD refused by bsd ...`;
+   - in `autopsy.log`, the "bsd requests per command" table and the last
+     128 operations.
+2. **A/B tests**, one per game, each until the freeze or 15 min online
+   without a freeze. Put the line under `[net]` in `mvlo.ini`, then set it
+   back as before:
+   - A: `small_ipc = 1` (no mapped network request);
+   - B: `socket_config = 1` (default libnx buffers);
+   - C: `bsd_sessions = 6`;
+   - D: `poll_slice_ms = 0` (far fewer requests per second);
+   For each test: freeze yes/no, after how many seconds online, and
+   the `bsd: N req` counter at the freeze. If D clearly delays the freeze,
+   it's the number of calls; if nothing changes, it's a duration.
 
-## 4 sexies. Essai de la v0.1.22 : pendant un gel
+## 4 sexies. Testing v0.1.22: during a freeze
 
-1. Joue en ligne jusqu'au gel (~7 min de connexion).
-2. Ne touche à rien. ~15 s après le gel : **une vibration longue** =
-   rapport écrit dans `autopsy.log` ; **trois courtes** = la carte SD ne l'a
-   pas pris (le PC de `netlog` le reçoit peut-être). Ensuite deux courtes
-   toutes les 5 s tant que le processus tourne.
-3. ~90 s après le gel le jeu se ferme tout seul (« Vous avez quitté le
-   logiciel car une erreur est survenue ») : plus besoin de POWER. Note si
-   HOME et le reste répondent tout de suite.
-4. Envoie `autopsy.log`, `debug.log`, `stall.log`.
+1. Play online until the freeze (~7 min connected).
+2. Don't touch anything. ~15 s after the freeze: **one long vibration** =
+   report written to `autopsy.log`; **three short ones** = the SD card didn't
+   take it (the `netlog` PC may have received it). After that, two short ones
+   every 5 s as long as the process is running.
+3. ~90 s after the freeze, the game closes by itself ("The software was
+   closed because an error occurred"): no more need for POWER. Note whether
+   HOME and everything else respond right away.
+4. Send `autopsy.log`, `debug.log`, `stall.log`.
 
-Pour tester l'outillage sans attendre : `[debug] fake_stall_frame = 3600`
-(arrête la boucle de rendu à cette image), puis remets `0`.
+To test the tooling without waiting: `[debug] fake_stall_frame = 3600`
+(stops the render loop at that frame), then set it back to `0`.
 
-## 4 quinquies. Essai de la v0.1.21, dans l'ordre
+## 4 quinquies. Testing v0.1.21, in order
 
-Copier seulement `mvlo_nx-nro` (pas d'android-build). Garder `mvlo.ini`.
+Copy only `mvlo_nx-nro` (no android-build). Keep `mvlo.ini`.
 
-1. **Room Settings et début de partie** : comparer aux temps de la v0.1.20.
-   Lignes utiles dans `debug.log` :
+1. **Room Settings and game start**: compare with the v0.1.20 timings.
+   Useful lines in `debug.log`:
    - `[io] basename fallback: N answered from the game folder listing (...),
-     M real stats` — M doit rester presque nul ;
+     M real stats` — M should stay close to zero;
    - `[io] kept-open files: ... reopens served without the SD card ...` —
-     plus de réutilisations qu'en v0.1.20 pour le même parcours ;
-   - `[hitch]` : `stat` doit coûter nettement moins que 0,3 ms par appel,
-     `file open` moins aussi.
-   En cas de fichier introuvable ou de chargement raté : `[io] keep_open = 0`
-   et dire si ça le règle.
-2. Rien d'autre ne change : la vibration pendant un gel et tout le reste
-   de la v0.1.20 restent valables.
+     more reuses than in v0.1.20 for the same run;
+   - `[hitch]`: `stat` should cost clearly less than 0.3 ms per call,
+     `file open` less too.
+   If a file can't be found or a load fails: `[io] keep_open = 0`
+   and tell me whether that fixes it.
+2. Nothing else changes: the vibration during a freeze and everything else
+   from v0.1.20 still apply.
 
-## 4 quater. Essai de la v0.1.20 (nuit du 28 au 29/10), dans l'ordre
+## 4 quater. Testing v0.1.20 (night of Oct 28-29), in order
 
-Copier seulement l'artefact `mvlo_nx-nro` (le `.nro` ; pas de nouvelles données
-de jeu, aucun android-build nécessaire). Garder `prefs.kv` et `mvlo.ini` : les
-nouvelles options ont leurs valeurs par défaut. Garder `[debug] netlog` et
-l'écoute PC si possible.
+Copy only the `mvlo_nx-nro` artifact (the `.nro`; no new game data, no
+android-build needed). Keep `prefs.kv` and `mvlo.ini`: the new options have
+their default values. Keep `[debug] netlog` and the PC listener if
+possible.
 
-1. **Démarrage + Room Settings** : comme en v0.1.19, en un peu plus rapide
-   (fichiers gardés ouverts). Dans `debug.log`, ligne `[io] kept-open files:
-   ... reopens served without the SD card`. En cas de souci de fichiers
-   (texte manquant, chargement raté) : `[io] keep_open = 0`.
-2. **Blocage n° 1 (le jeu se fige, la console vit)** : enchaîner des débuts
-   de partie, comme quand il se produisait. Il ne doit plus se figer. Dans
-   `debug.log`, des lignes `[sig] main stuck NN ms in game code (...):
-   delivering its signals ... on its behalf` = la correction a servi. Si le
-   jeu se fige quand même : `stall.log` + `debug.log` + les derniers
-   battements (ils disent maintenant `gc: N parked for ... ms, M not acked
-   (qui ...)`). Pour comparer, une partie avec `[debug] gc_force_ms = 0`
-   (ancien comportement).
-3. **Blocage n° 2 (gel de toute la console)** : jouer ~15 min avec l'écoute
-   PC. Pendant un gel :
-   - **la manette vibre-t-elle deux fois toutes les 5 s ?** (après 12 s de
-     jeu figé). Oui = notre processus tourne encore, ce n'est pas toute la
-     console ; non = processus arrêté aussi ;
-   - envoyer les ~20 derniers battements : nouvelles parties `gc:`, `kmem:`
-     (appels noyau de mémoire, avec `IN FLIGHT` s'il y en a un en cours),
-     `nv:` (ioctl GPU, `IN FLIGHT`), `send:` (envois UDP lents/en échec) ;
-   - noter si le battement s'arrête **en même temps** que la vibration.
-4. **Auto-test optionnel** (≈ 1 s, au menu) : `[debug] gc_spin_test = 600`
-   → ligne `[selftest] GC with a spinning thread: ... PASSED` vers l'image
-   600. À remettre à 0 ensuite.
-5. **À-coups** : `[hitch]` (seuil 100 ms) sépare `file open` / `stat` /
-   `fstat` / `access` / GL. M'envoyer quelques lignes d'un premier affichage
-   d'objet en partie.
+1. **Startup + Room Settings**: as in v0.1.19, a bit faster
+   (files kept open). In `debug.log`, the line `[io] kept-open files:
+   ... reopens served without the SD card`. If there's a file problem
+   (missing text, failed load): `[io] keep_open = 0`.
+2. **Hang #1 (the game freezes, the console is alive)**: start game after
+   game, like when it used to happen. It should no longer freeze. In
+   `debug.log`, `[sig] main stuck NN ms in game code (...):
+   delivering its signals ... on its behalf` lines = the fix was used. If the
+   game freezes anyway: `stall.log` + `debug.log` + the latest
+   heartbeats (they now say `gc: N parked for ... ms, M not acked
+   (who ...)`). To compare, one game with `[debug] gc_force_ms = 0`
+   (old behavior).
+3. **Hang #2 (the whole console freezes)**: play ~15 min with the PC
+   listener. During a freeze:
+   - **does the controller vibrate twice every 5 s?** (after 12 s of a
+     frozen game). Yes = our process is still running, it's not the whole
+     console; no = the process has stopped too;
+   - send the last ~20 heartbeats: new parts `gc:`, `kmem:`
+     (kernel memory calls, with `IN FLIGHT` if one is in progress),
+     `nv:` (GPU ioctl, `IN FLIGHT`), `send:` (slow/failed UDP sends);
+   - note whether the heartbeat stops **at the same time** as the vibration.
+4. **Optional self-test** (≈ 1 s, on the menu): `[debug] gc_spin_test = 600`
+   → a `[selftest] GC with a spinning thread: ... PASSED` line around frame
+   600. Set it back to 0 afterwards.
+5. **Stutters**: `[hitch]` (100 ms threshold) separates `file open` / `stat` /
+   `fstat` / `access` / GL. Send me a few lines from an object's first
+   appearance in a game.
 
-Lignes à m'envoyer en priorité : `[sig]` (surtout `stuck ... on its behalf`
-et `cannot ...`), `[selftest]`, `[io] kept-open`, `[hitch]`, et pour un gel :
-`stall.log`, les derniers battements, vibration oui/non.
+Lines to send me first: `[sig]` (especially `stuck ... on its behalf`
+and `cannot ...`), `[selftest]`, `[io] kept-open`, `[hitch]`, and for a
+freeze: `stall.log`, the latest heartbeats, vibration yes/no.
 
-## 4 ter. Essai de la v0.1.13 (nuit du 27 au 28/10), dans l'ordre
+## 4 ter. Testing v0.1.13 (night of Oct 27-28), in order
 
-Copier **les deux** artefacts du dernier commit : `mvlo_nx-nro` (le `.nro` et
-`splash/`) et `mvlo-sd-data-v2.2.0.1` (données du jeu reconstruites : correctifs
-du clavier et de `UI/Navigate`). Garder `prefs.kv` et son `mvlo.ini` (les
-nouvelles options ont des valeurs par défaut, rien à ajouter).
+Copy **both** artifacts from the latest commit: `mvlo_nx-nro` (the `.nro` and
+`splash/`) and `mvlo-sd-data-v2.2.0.1` (rebuilt game data: fixes for the
+keyboard and `UI/Navigate`). Keep `prefs.kv` and your `mvlo.ini` (the new
+options have default values, nothing to add).
 
-1. **Démarrage** : le 1er lancement après la copie reste noir ~4 s (il note
-   la config EGL d'Unity dans `mvlo/.eglconfig`). **Relancer** : l'écran de
-   chargement doit apparaître dès ~0,5 s, puis continuer sans saut quand le
-   jeu prend la main. Lignes : `[load] early loading screen on` puis
-   `handed to Unity after ... ms`. Si l'écran reste figé ou noir après :
-   `[video] early_splash = 0` et m'envoyer `debug.log`.
-2. **Clavier** : pseudo puis chat d'un salon. Après validation (+) du clavier
-   Switch, le clavier du jeu doit se **fermer tout seul**.
-3. **Deux parties de suite**, la 2e au moins 5 minutes (c'est là que la
-   console gelait). Si elle gèle :
-   - noter si la **musique continue normalement** ou **boucle un bout de
-     son** (ça dit si le processeur tourne encore) ;
-   - envoyer `debug.log`, `stall.log` : les dernières lignes `[gpu]`, `[nv]`,
-     `[wd] alive` (elles portent maintenant l'état GPU) disent ce qui
-     grossissait ou ce que le GPU attendait.
-   Puis réessayer une fois avec `[video] shader_code_mb = 0` et une fois avec
-   `[debug] nv_tmem_mb = 8` pour savoir laquelle des deux protections compte.
-4. **À-coups** : pendant ces parties, chaque arrêt de plus de 100 ms écrit une
-   ligne `[hitch]` qui dit où part le temps (compilation GLSL, édition de
-   liens, génération de code nouveau, textures, attente du GPU…). C'est ce
-   qu'il me faut pour choisir la suite. Pour comparer : une partie avec
-   `[video] compile_boost = 0`, et une avec `[video] nv_shader_opt = 1`.
-5. **NullReferenceException** au début de la 2e partie : elle ne doit plus
-   apparaître ; si elle revient, envoyer les lignes complètes (avec la pile).
+1. **Startup**: the 1st launch after copying stays black ~4 s (it records
+   Unity's EGL config in `mvlo/.eglconfig`). **Relaunch**: the loading
+   screen should appear from ~0.5 s, then carry on without a jump when the
+   game takes over. Lines: `[load] early loading screen on` then
+   `handed to Unity after ... ms`. If the screen stays frozen or black after
+   that: `[video] early_splash = 0` and send me `debug.log`.
+2. **Keyboard**: nickname, then a room's chat. After confirming (+) on the
+   Switch keyboard, the game's keyboard should **close by itself**.
+3. **Two games in a row**, the 2nd one at least 5 minutes (that's when the
+   console used to freeze). If it freezes:
+   - note whether the **music carries on normally** or **loops a snippet of
+     sound** (that tells whether the CPU is still running);
+   - send `debug.log`, `stall.log`: the last `[gpu]`, `[nv]`,
+     `[wd] alive` lines (they now carry the GPU state) tell what was
+     growing or what the GPU was waiting for.
+   Then try again once with `[video] shader_code_mb = 0` and once with
+   `[debug] nv_tmem_mb = 8` to find out which of the two safeguards matters.
+4. **Stutters**: during these games, every pause longer than 100 ms writes a
+   `[hitch]` line that says where the time goes (GLSL compilation, linking,
+   generating new code, textures, waiting for the GPU…). That's what I need
+   to choose the next step. To compare: one game with
+   `[video] compile_boost = 0`, and one with `[video] nv_shader_opt = 1`.
+5. **NullReferenceException** at the start of the 2nd game: it should no
+   longer appear; if it comes back, send the full lines (with the stack).
 
-Lignes à m'envoyer en priorité : `[hitch]`, `[gpu]`, `[nv]`, `[load] early
-loading screen ...`, `[gpu] shader code segment full ...` (avec l'heure), et le
-`stall.log` en cas de gel.
+Lines to send me first: `[hitch]`, `[gpu]`, `[nv]`, `[load] early
+loading screen ...`, `[gpu] shader code segment full ...` (with the time), and
+`stall.log` in case of a freeze.
 
-## 4 bis. Essai de la v0.1.9 (nuit du 26 au 27/10), dans l'ordre
+## 4 bis. Testing v0.1.9 (night of Oct 26-27), in order
 
-Copier le nouveau `.nro` (artifact `mvlo_nx-nro` du dernier run *nro*). Les
-données SD n'ont pas changé, sauf si le rebuild Unity de la v0.1.8 (X/Y,
-`build_identifier`) est terminé : alors reprendre aussi `mvlo-sd-data-v2.2.0.1`
-(tout le dossier, `il2cpp/` compris). Garder `prefs.kv` : les zéros des
-réglages réels qui y sont restés sont effacés automatiquement au chargement.
+Copy the new `.nro` (`mvlo_nx-nro` artifact from the latest *nro* run). The
+SD data hasn't changed, unless the v0.1.8 Unity rebuild (X/Y,
+`build_identifier`) has finished: then also take `mvlo-sd-data-v2.2.0.1` again
+(the whole folder, `il2cpp/` included). Keep `prefs.kv`: the zeros left in it
+for real-valued settings are cleared automatically when it loads.
 
-1. **Démarrage** : après 2-4 s, le logo Infenek sur fond noir (2 s), puis les
-   images du jeu en fondu enchaîné, qui zooment doucement, le logo du jeu en
-   haut, et en bas « CHARGEMENT... », le pourcentage et la barre. Les images
-   sont dans `switch/mvlo/splash/` (artefact `mvlo_nx-nro` ou
-   `mvlo-sd-data`) ; sans elles, l'écran simple s'affiche. La barre affiche un
-   pourcentage à partir du 2e lancement. Si ça plante ou gèle à ce moment, ou
-   juste quand le jeu démarre : `[video] loading_screen = 0`. Si l'animation
-   saccade trop : `[video] loading_fps = 30`.
-2. **Son et HUD** : la musique doit jouer dès l'écran titre (volumes par
-   défaut 0,75 / 0,5 / 0,75), le HUD en partie doit être grand (HUD Scale 8).
-   Changer un volume dans les options, quitter, relancer : il doit être gardé.
-   Plus gros encore : `[game] hud_scale = 10` (ou 12).
-3. **Clavier** : *Play Game* → champ *Nickname* → A : le clavier de la Switch
-   doit s'ouvrir ; valider (+) → le pseudo change. Le clavier du jeu peut
-   rester affiché derrière : B le ferme, A rouvre le clavier Switch. Idem dans le chat d'une salle, et en
-   touchant le champ du doigt. S'il se rouvre en boucle : `[input] keyboard = 0`
-   (et m'envoyer les lignes `[kbd]`) ; s'il ne s'ouvre jamais, ou s'il
-   s'ouvre sur un A appuyé ailleurs qu'un champ de texte :
-   `[input] keyboard = 2`.
-4. **Lancement d'une partie** : noter la durée des arrêts (avant : 6 à 9 s).
-   Si quelque chose casse ou si des données semblent corrompues :
-   `[io] cache = 0` (ancien chemin).
-5. Jouer quelques minutes en ligne comme d'habitude.
+1. **Startup**: after 2-4 s, the Infenek logo on a black background (2 s),
+   then the game's images crossfading and slowly zooming, the game's logo
+   at the top, and at the bottom "LOADING...", the percentage and the bar.
+   The images are in `switch/mvlo/splash/` (`mvlo_nx-nro` or
+   `mvlo-sd-data` artifact); without them, the plain screen is shown. The bar
+   shows a percentage from the 2nd launch on. If it crashes or freezes at that
+   point, or just as the game starts: `[video] loading_screen = 0`. If the
+   animation stutters too much: `[video] loading_fps = 30`.
+2. **Sound and HUD**: the music should play from the title screen on (default
+   volumes 0.75 / 0.5 / 0.75), the in-game HUD should be large (HUD Scale 8).
+   Change a volume in the options, quit, relaunch: it should be kept.
+   Even bigger: `[game] hud_scale = 10` (or 12).
+3. **Keyboard**: *Play Game* → *Nickname* field → A: the Switch keyboard
+   should open; confirm (+) → the nickname changes. The game's keyboard may
+   stay displayed behind it: B closes it, A reopens the Switch keyboard. Same
+   in a room's chat, and when touching the field with your finger. If it
+   keeps reopening in a loop: `[input] keyboard = 0` (and send me the `[kbd]`
+   lines); if it never opens, or if it opens on an A press somewhere other
+   than a text field: `[input] keyboard = 2`.
+4. **Starting a game**: note how long the pauses last (before: 6 to 9 s).
+   If something breaks or if data seems corrupted:
+   `[io] cache = 0` (old path).
+5. Play online for a few minutes as usual.
 
-Logs à m'envoyer : `debug.log` (+ `debug.prev.log`), `stall.log` s'il a grossi,
-et une phrase par point ci-dessus (OK / KO). Nouvelles lignes utiles dans
-`debug.log` :
-- `[load] ...` (écran de chargement), `[kbd] ...` (clavier),
-- `[io] cache: ...` et `[io]   <fichier> ...` (temps SD par fichier, toutes
-  les ~15-30 s et après chaque image de plus d'1 s), `[io] slow SD read`,
+Logs to send me: `debug.log` (+ `debug.prev.log`), `stall.log` if it has
+grown, and one sentence per item above (OK / not OK). New useful lines in
+`debug.log`:
+- `[load] ...` (loading screen), `[kbd] ...` (keyboard),
+- `[io] cache: ...` and `[io]   <file> ...` (SD time per file, every
+  ~15-30 s and after each frame longer than 1 s), `[io] slow SD read`,
 - `[perf] per frame: nativeRender X ms ... present Y ms | limiter sleep Z ms`
-  (dit ce qui limite à 30 i/s),
-- et, si l'`ArgumentOutOfRangeException` de `UI/Navigate` revient, **les
-  lignes complètes** qui la contiennent (avec la pile si elle suit).
+  (tells what caps it at 30 fps),
+- and, if the `ArgumentOutOfRangeException` from `UI/Navigate` comes back,
+  **the full lines** that contain it (with the stack if it follows).
 
-Si un essai tourne mal, désactiver les nouveautés une à une
-(`[video] loading_screen`, `[input] keyboard`, `[io] cache`, puis
+If a test goes wrong, turn off the new features one by one
+(`[video] loading_screen`, `[input] keyboard`, `[io] cache`, then
 `[debug] jni_forname = 0`, `[debug] jni_avariants = 0`).
 
-## 5. Quels logs m'envoyer
+## 5. Which logs to send me
 
-Après un essai (qu'il marche ou plante), copie depuis la SD :
+After a test (whether it works or crashes), copy from the SD card:
 
-1. `sdmc:/switch/mvlo/debug.log` — **le plus important** (horodaté)
-2. `sdmc:/switch/mvlo/debug.prev.log` — le lancement précédent
-3. `sdmc:/switch/mvlo/stall.log` — s'il existe : blocages (watchdog) et
-   **crash dumps** (registres, backtrace `libxxx.so+0x…`)
-4. `sdmc:/atmosphere/crash_reports/*.log` récents et
-   `sdmc:/atmosphere/fatal_errors/*.bin` récents, s'il y en a
-5. `sdmc:/switch/mvlo/BUILDINFO.txt` (identifie les données utilisées)
-6. une phrase : jusqu'où ça va (écran noir ? logo ? menu ? partie ?), en
-   dock ou en portable, et quel firmware/Atmosphère.
+1. `sdmc:/switch/mvlo/debug.log` — **the most important** (timestamped)
+2. `sdmc:/switch/mvlo/debug.prev.log` — the previous launch
+3. `sdmc:/switch/mvlo/stall.log` — if it exists: hangs (watchdog) and
+   **crash dumps** (registers, backtrace `libxxx.so+0x…`)
+4. recent `sdmc:/atmosphere/crash_reports/*.log` and recent
+   `sdmc:/atmosphere/fatal_errors/*.bin`, if there are any
+5. `sdmc:/switch/mvlo/BUILDINFO.txt` (identifies the data used)
+6. one sentence: how far it gets (black screen? logo? menu? game?), docked
+   or handheld, and which firmware/Atmosphère.
 
-Si la console **gèle** (rien ne répond), mets `log_sync = 1` dans la section
-`[debug]` de `mvlo.ini` et refais l'essai : chaque ligne est alors écrite
-immédiatement, donc la dernière ligne du log dit où ça s'est arrêté.
+If the console **freezes** (nothing responds), set `log_sync = 1` in the
+`[debug]` section of `mvlo.ini` and run the test again: each line is then
+written immediately, so the last line of the log tells where it stopped.
 
-## 6. Interrupteurs de diagnostic (`[debug]` dans mvlo.ini)
+## 6. Diagnostic switches (`[debug]` in mvlo.ini)
 
-Ne les change que si je te le demande (tous à `1` par défaut) :
+Only change them if I ask you to (all at `1` by default):
 
-| Clé | Effet si `0` |
+| Key | Effect if `0` |
 |---|---|
-| `region_patch` | Unity garde des réservations de 256 Mo (OOM probable sur 4 Go) |
-| `choreographer_patch` | le moteur cherche un Choreographer Android |
-| `audio_opensl_patch` / `fmod_patch` | audio probablement muet |
-| `time_hook` | le temps vient seulement du flux vsync |
-| `vsync_feed` | le moteur attend un vsync qui n'arrive jamais (gel) |
-| `cpu_boost` | pas de boost CPU au chargement |
-| `tls_anchor = 0` | pages de threads non réservées au démarrage (crash `svcMapMemory FAIL` possible ; 64 par défaut) |
-| `gc = disable` | GC jamais lancé (contournement si gel au milieu d'une partie) |
-| `jni_forname = 0` | `Class.forName` rend `java/lang/Object` comme avant la v0.1.9 |
-| `jni_avariants = 0` | les appels JNI `…MethodA` ne reçoivent plus leurs arguments (avant v0.1.9) |
-| `log_level = 2` | log verbeux (lent) |
-| `log_sync = 1` | chaque ligne écrite tout de suite, sur le thread qui l'écrit (lent ; pour un gel complet de la console) |
-| `zlib_level = 0` | gzip du jeu au niveau d'origine (6) : sauvegarde du replay plus lente en fin de partie |
-| `[io] write_behind = 0` | fichiers créés par le jeu (replays) écrits sur son thread, comme avant la v0.1.41 |
-| `oc_pool_mb` / `gpu_arena_mb` | mémoire réservée au démarrage (448 / 256 Mo par défaut ; plus = crash « Jungle » possible) |
-| `autopsy = 0` | pas de rapport `autopsy.log` pendant un gel |
-| `stall_exit_s = 0` | le jeu ne se ferme plus tout seul après un gel (90 s par défaut) |
-| `unity_args = ...` | ligne de commande passée à Unity (avancé) |
+| `region_patch` | Unity keeps 256 MB reservations (likely OOM on 4 GB) |
+| `choreographer_patch` | the engine looks for an Android Choreographer |
+| `audio_opensl_patch` / `fmod_patch` | audio probably silent |
+| `time_hook` | time only comes from the vsync feed |
+| `vsync_feed` | the engine waits for a vsync that never comes (freeze) |
+| `cpu_boost` | no CPU boost while loading |
+| `tls_anchor = 0` | thread pages not reserved at startup (possible `svcMapMemory FAIL` crash; 64 by default) |
+| `gc = disable` | GC never runs (workaround if it freezes in the middle of a game) |
+| `jni_forname = 0` | `Class.forName` returns `java/lang/Object` like before v0.1.9 |
+| `jni_avariants = 0` | JNI `…MethodA` calls no longer receive their arguments (before v0.1.9) |
+| `log_level = 2` | verbose log (slow) |
+| `log_sync = 1` | each line written right away, on the thread that writes it (slow; for a full console freeze) |
+| `zlib_level = 0` | the game's gzip at its original level (6): slower replay save at the end of a game |
+| `[io] write_behind = 0` | files created by the game (replays) written on its thread, like before v0.1.41 |
+| `oc_pool_mb` / `gpu_arena_mb` | memory reserved at startup (448 / 256 MB by default; more = possible "Jungle" crash) |
+| `autopsy = 0` | no `autopsy.log` report during a freeze |
+| `stall_exit_s = 0` | the game no longer closes by itself after a freeze (90 s by default) |
+| `unity_args = ...` | command line passed to Unity (advanced) |
 
-Diagnostic du gel en ligne (tous à off par défaut) : `[debug] photon_ring = 1`
-(anneau des 30 dernières s de datagrammes Photon, dans l'autopsie et le
-`debug.log`), `[debug] udp_soak = ip:port` (imite le trafic Photon sans Photon,
-voir 4 octies ; `udp_soak_connect = 0` pour une socket non connectée),
-`[net] bsd_sessions = 1..8` (sessions bsd:u, défaut 3), `socket_config = 1`
-(tampons libnx), `small_ipc = 1`, `local_wait = 1`, `poll_slice_ms`.
+Online freeze diagnostics (all off by default): `[debug] photon_ring = 1`
+(a ring of the last 30 s of Photon datagrams, in the autopsy and in
+`debug.log`), `[debug] udp_soak = ip:port` (mimics Photon traffic without
+Photon, see 4 octies; `udp_soak_connect = 0` for an unconnected socket),
+`[net] bsd_sessions = 1..8` (bsd:u sessions, default 3), `socket_config = 1`
+(libnx buffers), `small_ipc = 1`, `local_wait = 1`, `poll_slice_ms`.
 
-`[video] resolution = 1280x720` force le 720p (plus fluide en dock),
-`frame_limiter = 0` retire le limiteur 60 Hz du wrapper.
-`[video] loading_screen = 0` coupe l'écran de chargement,
-`[input] keyboard = 0` le clavier Switch, `[io] cache = 0` le cache de
-lecture SD (`cache_mb`, `block_kb`, `readahead_kb` pour le régler),
-`[game] hud_scale = N` force la taille du HUD.
+`[video] resolution = 1280x720` forces 720p (smoother when docked),
+`frame_limiter = 0` removes the wrapper's 60 Hz limiter.
+`[video] loading_screen = 0` turns off the loading screen,
+`[input] keyboard = 0` the Switch keyboard, `[io] cache = 0` the SD read
+cache (`cache_mb`, `block_kb`, `readahead_kb` to tune it),
+`[game] hud_scale = N` forces the HUD size.
 
-## 7. Ce qui a été testé, honnêtement
+## 7. What has been tested, honestly
 
-Voir `docs/STATUS.md` : ce qui a tourné en émulation (Eden, dans la CI) et ce
-qui n'a jamais tourné sur une vraie console. Le premier essai sur console
-est le vrai test.
+See `docs/STATUS.md`: what has run under emulation (Eden, in the CI) and what
+has never run on a real console. The first try on a console
+is the real test.

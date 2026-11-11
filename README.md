@@ -1,80 +1,81 @@
-# mvlo_nx — NSMB Mario vs Luigi Online sur Nintendo Switch (homebrew)
+# mvlo_nx — NSMB Mario vs Luigi Online on Nintendo Switch (homebrew)
 
-Portage non officiel de [NSMB Mario vs Luigi Online](https://github.com/ipodtouch0218/NSMB-MarioVsLuigi)
-(ipodtouch0218 et contributeurs) sur Switch, sous forme de `.nro`.
+Unofficial port of [NSMB Mario vs Luigi Online](https://github.com/ipodtouch0218/NSMB-MarioVsLuigi)
+(by ipodtouch0218 and contributors) to the Switch, as a `.nro`.
 
-Le jeu (Unity 6000.3.10f1) est compilé **depuis ses sources officielles** en
-Android ARM64/IL2CPP par la CI, puis ses bibliothèques natives sont chargées
-sur Switch par un wrapper libnx de la lignée *so-loader*, adapté de
+The game (Unity 6000.3.10f1) is built **from its official sources** for
+Android ARM64/IL2CPP by the CI; its native libraries are then loaded on the
+Switch by a libnx wrapper from the *so-loader* lineage, adapted from
 [cloverpit_nx](https://github.com/ChanseyIsTheBest/cloverpit_nx).
 
-> ⚠ Ce dépôt ne contient **ni code ni asset du jeu** : le jeu n'a pas de
-> licence publique et contient des assets Nintendo. La CI le compile depuis
-> ses sources officielles ; ses données ne sont publiées que dans une archive
-> chiffrée (mot de passe connu du seul propriétaire du dépôt).
+> ⚠ This repository contains **no game code and no game assets**: the game has
+> no public license and contains Nintendo assets. The CI builds it from its
+> official sources; its data is only published inside an encrypted archive
+> (password known only to the repository owner).
 
-## Installation (carte SD)
+## Installation (SD card)
 
-Tout va dans **`sdmc:/switch/mvlo/`** :
+Everything goes into **`sdmc:/switch/mvlo/`**:
 
 ```
 sdmc:/switch/mvlo/
-├── mvlo_nx.nro                     ← artifact « mvlo_nx-nro » (workflow nro)
+├── mvlo_nx.nro                     ← artifact "mvlo_nx-nro" (nro workflow)
 ├── libmain.so libunity.so libil2cpp.so [lib_burst_generated.so]
-├── assets/…                         ← artifact « mvlo-sd-data-v2.2.0.1 » (workflow android-build, zip chiffré)
-└── mvlo.ini                         ← créé au 1er lancement ; y mettre son AppId Photon
+├── assets/…                         ← artifact "mvlo-sd-data-v2.2.0.1" (android-build workflow, encrypted zip)
+└── mvlo.ini                         ← created on first launch; put your Photon AppId in it
 ```
 
-Guide pas à pas, AppId Photon et logs à remonter : **[docs/TEST.md](docs/TEST.md)**.
+Step-by-step guide, Photon AppId and which logs to send back: **[docs/TEST.md](docs/TEST.md)**.
 
-## Lancement
+## Launching
 
-hbmenu en **title takeover** : maintenir **R** en lançant n'importe quel jeu,
-puis choisir *Mario vs Luigi Online*. (Pas depuis l'Album : mémoire insuffisante.)
+From hbmenu in **title takeover** mode: hold **R** while starting any game,
+then pick *Mario vs Luigi Online*. (Not from the Album: not enough memory.)
 
 ## Build
 
-### Le .nro (wrapper)
+### The .nro (wrapper)
 ```sh
 docker run --rm -v "$PWD":/src -w /src devkitpro/devkita64 make -j4
 ```
-ou, avec devkitPro installé : `make` (`switch-mesa switch-libdrm_nouveau switch-sdl2 switch-zlib`).
-La CI `nro.yml` fait la même chose à chaque push et publie l'artifact `mvlo_nx-nro`.
+or, with devkitPro installed: `make` (`switch-mesa switch-libdrm_nouveau switch-sdl2 switch-zlib`).
+The `nro.yml` CI does the same on every push and publishes the `mvlo_nx-nro` artifact.
 
-### Les données du jeu
-Workflow **android-build** (`.github/workflows/android.yml`, déclenchement
-manuel ou push sur `unity/`) : checkout du tag officiel, injection du pont
-`unity/` + patch de 5 lignes (`unity/prepare_project.py`), build Unity via
-game-ci (secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`). L'APK est
-gardé en cache Actions ; l'artifact publié est le dossier SD prêt à copier.
+### The game data
+**android-build** workflow (`.github/workflows/android.yml`, manual trigger or
+push on `unity/`): checks out the official tag, injects the `unity/` bridge
+and a few text patches (`unity/prepare_project.py`), builds with Unity through
+game-ci (secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`). The APK is
+kept in the Actions cache; the published artifact is the ready-to-copy SD
+folder, as an AES-256 zip (secret `SD_ARCHIVE_PASSWORD`, open it with 7-Zip).
 
-### Test en émulation
-Workflow **emu-test** : lance le `.nro` + les données en cache dans l'émulateur
-Eden (rendu logiciel) sur le runner et imprime `debug.log` dans les logs du job.
+### Emulator test
+**emu-test** workflow: runs the `.nro` + the cached game data in the Eden
+emulator (software rendering) on the runner and prints `debug.log` in the job log.
 
-### Nouvelle version d'Unity / du jeu
+### New Unity / game version
 `tools/re/derive_unity.py <libunity.so> <libunity.sym.so> -o source/mvlo_unity_offsets.h`
-avec le player Android de la nouvelle version (image `unityci/editor:ubuntu-<version>-android-3`,
+with the Android player of the new version (image `unityci/editor:ubuntu-<version>-android-3`,
 `PlaybackEngines/AndroidPlayer/Variations/il2cpp/Release/{Libs,Symbols}/arm64-v8a`).
-`tools/re/check_imports.py` liste les imports non couverts par les shims.
+`tools/re/check_imports.py` lists the imports not covered by the shims.
 
-## Arborescence
+## Layout
 
-| Chemin | Rôle |
+| Path | Role |
 |---|---|
-| `source/` | wrapper C (substrat cloverpit_nx + modules `nx_*` / `mvlo_*`) |
-| `unity/` | code injecté dans le build Android (pont C#, script de build, patch) |
-| `tools/` | packaging SD, outils de rétro-ingénierie (offsets, imports, symboles) |
-| `dist/mvlo.ini.example` | configuration par défaut |
+| `source/` | C wrapper (cloverpit_nx base + `nx_*` / `mvlo_*` modules) |
+| `unity/` | code injected into the Android build (C# bridge, build script, patch) |
+| `tools/` | SD packaging, reverse-engineering tools (offsets, imports, symbols), console scripts |
+| `dist/mvlo.ini.example` | default configuration |
 | `docs/` | PLAN, DECISIONS, STATUS (journal), TEST (installation) |
 
-## Crédits
+## Credits
 
-- Portage Switch (mvlo_nx) : **Jonathan8520**.
-- Jeu : **ipodtouch0218** et les contributeurs de NSMB-MarioVsLuigi. Photon Quantum : Exit Games.
-- Wrapper : **cloverpit_nx** (ChanseyIsTheBest, MIT) et sa lignée SoLoader :
-  badpiggies_nx, colorsheep_nx, laytonbmr_nx, vln_nx, pvz_fusion_nx ;
-  so-loader de TheOfficialFloW (Andy Nguyen), fgsfds, Rinnegatamante (MIT).
-- Outils : devkitPro / libnx / switch-mesa, game-ci, Eden (tests en émulation).
+- Switch port (mvlo_nx): **Jonathan8520**.
+- Game: **ipodtouch0218** and the NSMB-MarioVsLuigi contributors. Photon Quantum: Exit Games.
+- Wrapper: **cloverpit_nx** (ChanseyIsTheBest, MIT) and its SoLoader lineage:
+  badpiggies_nx, colorsheep_nx, laytonbmr_nx, vln_nx, pvz_fusion_nx;
+  so-loader by TheOfficialFloW (Andy Nguyen), fgsfds, Rinnegatamante (MIT).
+- Tools: devkitPro / libnx / switch-mesa, game-ci, Eden (emulator tests).
 
-Code du wrapper sous licence MIT (voir `LICENSE` et `LICENSE.cloverpit_nx`).
+The wrapper code is MIT-licensed (see `LICENSE` and `LICENSE.cloverpit_nx`).

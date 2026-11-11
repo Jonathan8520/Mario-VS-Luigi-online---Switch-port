@@ -1,748 +1,757 @@
-# État du projet (mis à jour en continu pendant la nuit)
+# Project status
 
-Légende : ✅ vérifié · 🟡 implémenté, non vérifié · ❌ bloqué / non fait
+Legend: ✅ verified · 🟡 implemented, not verified · ❌ blocked / not done
 
-## Livrables du réveil
-| Livrable | État |
+## Deliverables for the morning
+| Deliverable | Status |
 |---|---|
-| `.nro` compilé par la CI, téléchargeable (workflow **nro**, artifact `mvlo_nx-nro`) | ✅ |
-| Données du jeu pour la SD (workflow **android-build**, artifact `mvlo-sd-data-v2.2.0.1`, 94 Mo zippé / 244 Mo sur la SD) | ✅ |
-| `docs/TEST.md` (SD, lancement, AppId Photon, logs) | ✅ |
+| `.nro` built by CI, downloadable (workflow **nro**, artifact `mvlo_nx-nro`) | ✅ |
+| Game data for the SD card (workflow **android-build**, artifact `mvlo-sd-data-v2.2.0.1`, 94 MB zipped / 244 MB on the SD) | ✅ |
+| `docs/TEST.md` (SD, launch, Photon AppId, logs) | ✅ |
 
-## Ce qui a été réellement exécuté
-- ✅ Le `.nro` compile sans erreur (local + CI, image `devkitpro/devkita64`).
-- ✅ **Émulateur Eden** (yuzu lineage, `linuxserver/eden`, rendu logiciel
-  lavapipe) dans le conteneur : le `.nro` démarre, crée `mvlo.ini`, écrit
-  `debug.log`, initialise les sockets BSD (IP locale, DNS dispo).
-- ✅ **Smoke test** (`[debug] smoke_test = 1`) avec le *vrai* player Unity
-  6000.3.10f1 (libmain + libunity, sans le jeu) sous Eden :
-  BuildID reconnu, **6 patches moteur + 21/21 sites de granularité mémoire
-  appliqués**, 484 constructeurs de libunity exécutés, `JNI_OnLoad` →
-  62 natives UnityPlayer enregistrées, les 11 natives pilotées trouvées aux
-  RVA attendues, flux vsync `SetFrameTimeNanos` à 60 Hz (30 appels/0,5 s).
-- ✅ **smoke_test = 2** : le player Unity entre dans son cycle de vie
-  (initJni, RecreateGfxState, SetRunning, 1re frame) : allocateur Dynamic Heap,
-  infos système et `ApplicationInfo 'com.ipodtouch0218.NSMBMarioVsLuigi' 2.2.0.1`
-  journalisés, jusqu'au chargement d'IL2CPP (absent par construction →
-  dialogue d'erreur Unity intercepté et journalisé).
-- ✅ **smoke_test = 3** : auto-test de l'émulation de signaux avec le protocole
-  exact de bdwgc à travers la vraie table d'imports : 5/5 cycles
-  stop-the-world, 4/4 pointeurs de pile enregistrés, arrêt ≈ 10 ms.
-- ✅ **smoke_test = 4** (dans la CI) : DNS 3/3 (`ns.photonengine.io` résolu),
-  aller-retour UDP (NTP) réussi, errno TCP Linux correct.
-- ✅ **Jeu complet sous Eden** (workflow **emu-test**) : 506 imports résolus,
-  IL2CPP + GC actifs, pont C# NxPort connecté, manette 1 détectée, FMOD
-  OpenSL en lecture (24 kHz stéréo), **écran titre rendu en continu pendant
-  10 min**, aucune exception ni erreur Unity, aucun plantage. ~7,7 i/s en rendu
-  logiciel (lavapipe, CPU du runner) : ce chiffre ne dit rien de la Switch.
-- ✅ **Entrées** : des appuis scriptés (`[debug] autopress`) sur la manette 1
-  font passer l'écran titre puis entrer dans le menu en ligne.
-- ✅ **HTTPS** : le jeu télécharge ses actualités
-  (`mariovsluigi.azurewebsites.net`, « Found 3 news post(s) ») via le DNS et
-  les sockets du port.
-- ✅ **Photon** : la connexion est tentée et échoue proprement avec le message
-  « No Photon Quantum AppId » (aucun AppId dans le test, comme prévu). La
-  connexion réelle reste à tester avec votre AppId.
-- ✅ **Vraie Switch (v0.1.1, fw 22.1.0, portable)** : écran titre, menus,
-  manette, son, réseau (actualités HTTPS), **30 i/s stables**, ~28 s de
-  chargement, aucun plantage. *Play Game* reste sur « Connecting… » faute
-  d'AppId Photon dans `mvlo.ini` (attendu).
-- 🟡 v0.1.2 : 60 i/s par défaut (le jeu laisse « Max FPS » illimité, ce
-  qu'Unity Android traduit en 30). Sous Eden le réglage s'applique
-  (`targetFrameRate never set by the game -> 60`) et l'écran titre passe de
-  ~7,7 à ~13 i/s en rendu logiciel ; à confirmer sur console.
-- ✅ Connexion Photon réelle (vraie Switch, 26/10 au soir) : authentification
-  (anonyme avec un AppId perso, ou l'auth officielle `use_official_auth = 1`
-  qui marche aussi : réponse 200 + jeton), région `eu`, création de salle,
-  Quantum Runner, AddPlayer, **partie jouée plus de 5 min avec le GC actif**
-  (v0.1.5), fermeture propre.
+## What was actually run
+- ✅ The `.nro` compiles without errors (local + CI, image `devkitpro/devkita64`).
+- ✅ **Eden emulator** (yuzu lineage, `linuxserver/eden`, lavapipe software
+  rendering) in the container: the `.nro` starts, creates `mvlo.ini`, writes
+  `debug.log`, initializes BSD sockets (local IP, DNS available).
+- ✅ **Smoke test** (`[debug] smoke_test = 1`) with the *real* Unity player
+  6000.3.10f1 (libmain + libunity, without the game) under Eden:
+  BuildID recognized, **6 engine patches + 21/21 memory granularity sites
+  applied**, 484 libunity constructors run, `JNI_OnLoad` →
+  62 UnityPlayer natives registered, the 11 driven natives found at the
+  expected RVAs, `SetFrameTimeNanos` vsync stream at 60 Hz (30 calls/0.5 s).
+- ✅ **smoke_test = 2**: the Unity player enters its lifecycle
+  (initJni, RecreateGfxState, SetRunning, 1st frame): Dynamic Heap allocator,
+  system info and `ApplicationInfo 'com.ipodtouch0218.NSMBMarioVsLuigi' 2.2.0.1`
+  logged, up to the loading of IL2CPP (absent by design →
+  Unity error dialog intercepted and logged).
+- ✅ **smoke_test = 3**: self-test of the signal emulation with bdwgc's
+  exact protocol through the real import table: 5/5
+  stop-the-world cycles, 4/4 stack pointers registered, stop ≈ 10 ms.
+- ✅ **smoke_test = 4** (in CI): DNS 3/3 (`ns.photonengine.io` resolved),
+  UDP round trip (NTP) succeeded, correct Linux TCP errno.
+- ✅ **Full game under Eden** (workflow **emu-test**): 506 imports resolved,
+  IL2CPP + GC active, NxPort C# bridge connected, controller 1 detected, FMOD
+  OpenSL playing (24 kHz stereo), **title screen rendered continuously for
+  10 min**, no Unity exception or error, no crash. ~7.7 fps in software
+  rendering (lavapipe, runner CPU): this figure says nothing about the Switch.
+- ✅ **Input**: scripted presses (`[debug] autopress`) on controller 1
+  get past the title screen and then into the online menu.
+- ✅ **HTTPS**: the game downloads its news
+  (`mariovsluigi.azurewebsites.net`, "Found 3 news post(s)") through the
+  port's DNS and sockets.
+- ✅ **Photon**: the connection is attempted and fails cleanly with the message
+  "No Photon Quantum AppId" (no AppId in the test, as expected). The
+  real connection remains to be tested with your AppId.
+- ✅ **Real Switch (v0.1.1, fw 22.1.0, handheld)**: title screen, menus,
+  controller, sound, network (HTTPS news), **stable 30 fps**, ~28 s of
+  loading, no crash. *Play Game* stays on "Connecting…" for lack of a
+  Photon AppId in `mvlo.ini` (expected).
+- 🟡 v0.1.2: 60 fps by default (the game leaves "Max FPS" unlimited, which
+  Unity Android translates to 30). Under Eden the setting applies
+  (`targetFrameRate never set by the game -> 60`) and the title screen goes
+  from ~7.7 to ~13 fps in software rendering; to be confirmed on console.
+- ✅ Real Photon connection (real Switch, Oct 26 evening): authentication
+  (anonymous with a personal AppId, or the official auth `use_official_auth = 1`
+  which also works: 200 response + token), region `eu`, room creation,
+  Quantum Runner, AddPlayer, **match played for more than 5 min with the GC
+  active** (v0.1.5), clean shutdown.
 
-## Sur console, 26/10 au soir (v0.1.3 → v0.1.7)
-Corrigé et vérifié sur la vraie Switch :
-- ✅ **Gel après « Creating a game »** (écran figé, musique qui continue) :
-  stop-the-world du GC bloqué. Le thread réseau de Photon boucle sur
-  `poll()` avec des délais courts et `poll_fake` sortait par le test de
-  délai **avant** son point sûr : le signal n'était jamais livré. Point sûr
-  désormais à l'entrée de `poll/recvfrom/sendto/accept4`. Confirmé : avec
-  `gc = disable` la partie tournait (puis la console se figeait faute de
-  mémoire), avec la correction elle tourne GC actif.
-- ✅ **Plantage `[oc] svcMapMemory FAIL rc=0xd401`** : le noyau place les
-  pages de TLS des threads (type 0xc, 8 threads/page, page démappée quand elle
-  se vide) au hasard dans la zone de pile, donc dans la fenêtre d'overcommit,
-  dans de l'espace réservé par Unity mais pas encore engagé. Au démarrage,
-  64 threads auxiliaires forcent la création de ~9 pages et un thread par page
-  reste vivant (`[tls] … pinned`), les threads suivants réutilisent ces places
-  (`debug.tls_anchor`, 64). Vérifié : plus aucune page 0xc n'apparaît après
-  l'armement. (La 1re version utilisait la priorité 0x3F, réservée au cœur 3 :
-  aucun thread créé.)
-- ✅ `stall.log` affiche maintenant l'état des signaux émulés de chaque thread
-  (`[sig] tid … pending … blocked …`) : un stop-the-world bloqué nomme le
-  thread fautif.
+## On console, Oct 26 evening (v0.1.3 → v0.1.7)
+Fixed and verified on the real Switch:
+- ✅ **Freeze after "Creating a game"** (frozen screen, music keeps playing):
+  GC stop-the-world stuck. Photon's network thread loops on
+  `poll()` with short timeouts and `poll_fake` exited through the timeout
+  check **before** its safe point: the signal was never delivered. Safe
+  point now at the entry of `poll/recvfrom/sendto/accept4`. Confirmed: with
+  `gc = disable` the match ran (then the console froze for lack of
+  memory); with the fix it runs with the GC active.
+- ✅ **Crash `[oc] svcMapMemory FAIL rc=0xd401`**: the kernel places the
+  threads' TLS pages (type 0xc, 8 threads/page, page unmapped when it
+  empties) at random in the stack region, hence in the overcommit window,
+  in space reserved by Unity but not yet committed. At startup,
+  64 helper threads force the creation of ~9 pages and one thread per page
+  stays alive (`[tls] … pinned`); later threads reuse those slots
+  (`debug.tls_anchor`, 64). Verified: no 0xc page appears any more after
+  arming. (The 1st version used priority 0x3F, reserved for core 3:
+  no thread created.)
+- ✅ `stall.log` now shows the emulated-signal state of each thread
+  (`[sig] tid … pending … blocked …`): a stuck stop-the-world names the
+  offending thread.
 
-- ✅ **PlayerPrefs, chaînes et entiers** (v0.1.8, vérifié sur console :
-  touches conservées après relance, `prefs.kv` de 53 entrées avec pseudo,
-  `Controls_Bindings`, `Graphics_MaxFPS`, `id`/`token` de l'auth officielle).
-  Rien n'était gardé avant, même dans la session : Unity 6000.3 charge ses
-  classes Java par `Class.forName`, que le faux JNI rend `java/lang/Object`,
-  donc ni les handlers de `unity_jni.c` ni `Uri.encode/decode` ni
-  `String(byte[], String)` (encodage des clés) n'étaient reconnus. Aiguillage
-  par **receveur** (handles de unity_jni) et par **signature** (DECISIONS 28).
-- ❌ **PlayerPrefs, réels** (HUD Scale, volumes : reviennent à 0) :
-  `getFloat` n'est pas routé vers `unity_jni.c` (`dispatch_float` de
-  `jni_fake.c` ne connaît que les boxes) et `putFloat` reçoit **0** alors que
-  la clé arrive juste (`[prefs] putFloat 'Audio_MasterVolume'=0` alors que le
-  son joue). Reproductible sous Eden.
-- ⚠ Cause racine commune : `Class.forName` rend toujours `java/lang/Object`.
-  Le corriger globalement réglerait tout ça d'un coup, mais change
-  l'aiguillage de nombreux appels qui marchent aujourd'hui « par accident » :
-  à faire prudemment, avec un test émulateur complet.
+- ✅ **PlayerPrefs, strings and integers** (v0.1.8, verified on console:
+  key bindings kept after relaunch, `prefs.kv` with 53 entries including the
+  nickname, `Controls_Bindings`, `Graphics_MaxFPS`, `id`/`token` from the
+  official auth). Nothing was kept before, not even within the session:
+  Unity 6000.3 loads its Java classes through `Class.forName`, for which the
+  fake JNI returns `java/lang/Object`, so neither the handlers in
+  `unity_jni.c` nor `Uri.encode/decode` nor `String(byte[], String)` (key
+  encoding) were recognized. Dispatch by **receiver** (unity_jni handles)
+  and by **signature** (DECISIONS 28).
+- ❌ **PlayerPrefs, floats** (HUD Scale, volumes: revert to 0):
+  `getFloat` is not routed to `unity_jni.c` (`dispatch_float` in
+  `jni_fake.c` only knows boxes) and `putFloat` receives **0** even though
+  the key arrives correctly (`[prefs] putFloat 'Audio_MasterVolume'=0` while the
+  sound is playing). Reproducible under Eden.
+- ⚠ Common root cause: `Class.forName` always returns `java/lang/Object`.
+  Fixing it globally would solve all of this at once, but it changes
+  the dispatch of many calls that work today "by accident":
+  to be done carefully, with a full emulator test.
 
-Corrigé, à vérifier :
-- 🟡 **X/Y inversés à l'affichage** en disposition `nintendo` (A/B étaient
-  mappés par étiquette, X/Y par position) : X → West (« x »), Y → North (« y »)
-  dans `NxInput.cs`. Demande la recompilation Unity.
-- 🟡 Option `[photon] build_identifier` (suffixe de l'AppVersion Photon ;
-  les sources publiques donnent `vanilla`, les builds officiels `official`).
-  Vide par défaut. Demande la recompilation Unity.
+Fixed, to be verified:
+- 🟡 **X/Y swapped on display** in the `nintendo` layout (A/B were
+  mapped by label, X/Y by position): X → West ("x"), Y → North ("y")
+  in `NxInput.cs`. Requires a Unity rebuild.
+- 🟡 Option `[photon] build_identifier` (suffix of the Photon AppVersion;
+  the public sources give `vanilla`, the official builds `official`).
+  Empty by default. Requires a Unity rebuild.
 
-Restant (vu sur console) :
-- ❌ **Pas de clavier** : impossible de changer le pseudo ou d'écrire dans le
-  chat (il faut brancher le clavier logiciel Switch, swkbd, sur le
-  `TouchScreenKeyboard` d'Unity / `showSoftInput`).
-- ❌ **Écran noir fixe ~25 s au démarrage** (frame 1 ≈ 23 s) : pas d'écran de
-  chargement.
-- ❌ **Gros arrêts au lancement d'une partie** (6 à 9 s, puis 0,3-1 s) : pas le
-  GC (aucun signal en attente) ; FMOD lit ses banques depuis la SD par petits
-  morceaux (`fsdev_read <- read_fake`) pendant que UnityMain attend.
-- ❌ `ArgumentOutOfRangeException` dans les callbacks `UI/Navigate` à la
-  manette (sans effet visible).
-- ❌ En 720p portable, le rond « NoItem » (bas droite) et la liste des joueurs
-  (haut gauche) sont trop petits ; *HUD Scale* au maximum convient à
-  l'utilisateur (une valeur par défaut plus grande sur Switch serait bien, et
-  il faut d'abord que les réels des PlayerPrefs soient gardés).
-- Mémoire physique libre au démarrage : 3 Mo (tas newlib 2 480 Mo) ; sans GC
-  la console finit figée (vu avec `gc = disable`).
+Remaining (seen on console):
+- ❌ **No keyboard**: impossible to change the nickname or to type in the
+  chat (the Switch software keyboard, swkbd, has to be hooked up to Unity's
+  `TouchScreenKeyboard` / `showSoftInput`).
+- ❌ **Fixed black screen for ~25 s at startup** (frame 1 ≈ 23 s): no
+  loading screen.
+- ❌ **Long stalls when a match starts** (6 to 9 s, then 0.3-1 s): not the
+  GC (no pending signal); FMOD reads its banks from the SD in small
+  chunks (`fsdev_read <- read_fake`) while UnityMain waits.
+- ❌ `ArgumentOutOfRangeException` in the `UI/Navigate` callbacks with the
+  controller (no visible effect).
+- ❌ In 720p handheld, the "NoItem" circle (bottom right) and the player list
+  (top left) are too small; *HUD Scale* at maximum suits
+  the user (a larger default value on Switch would be good, and the
+  PlayerPrefs floats first need to be kept).
+- Free physical memory at startup: 3 MB (newlib heap 2 480 MB); without GC
+  the console ends up frozen (seen with `gc = disable`).
 
-## Nuit du 26 au 27/10 (v0.1.9) — à vérifier sur console
-Vérifié sous Eden (CI, deux démarrages successifs sur la même SD) :
-- ✅ **Réglages réels gardés** : premier lancement `F Graphics_HudScale 8`,
-  volumes 0,75 / 0,5 / 0,75, `Graphics_MaxFPS 60` ; relancement :
-  `getFloat 'Graphics_HudScale' -> 8`, etc. Cause réelle : liste des
-  résolutions vide → valeurs par défaut du jeu jamais posées (DECISIONS 31).
-  Le HUD minuscule venait de là (défaut du jeu = 8 = maximum du curseur).
-- ✅ **Écran de chargement** pendant les frames 0-1 : `[load] loading
-  screen: 217 frames over 18601 ms`, visible sur les captures de 9 à 25 s
-  (titre, roue de carrés, barre).
-- 🟡 **Écran de chargement en images** (v0.1.10) : logo Infenek, 5 captures
-  en fondu enchaîné avec zoom lent, logo du jeu, barre arrondie. Rendu vérifié
-  sur PC (`tools/splash_preview`) et sous Eden (`5/5 picture(s) shown`, menus
-  atteints ensuite, temps de chargement inchangé) ; images téléchargées par la
-  CI, jamais commitées. Sous Eden le premier shader (avec des `return`)
-  faisait planter l'émulateur : remplacé par un shader sans branchement.
-  À voir sur console.
-- ✅ **Cache de lecture SD** actif (`[io] block cache ON`), statistiques par
-  fichier dans le log ; aucune lecture lente sous Eden (la SD de l'émulateur
-  est un SSD : le gain réel se mesurera sur console).
-- 🟡 **Clavier Switch** : branché (`showSoftInput` → swkbd), mais pas
-  déclenché par les appuis scriptés de la CI : à essayer sur console
-  (pseudo, chat). Il ne s'ouvre que juste après un appui ou un toucher, pour
-  que le clavier du jeu (qui redemande le clavier à chaque image) ne le
-  rouvre pas en boucle.
-- 🟡 `Class.forName` rend la vraie classe, `Call*MethodA` reçoivent leurs
-  arguments : aucune régression vue sous Eden (menus, réseau, audio
-  initialisé), à confirmer sur console.
-- ✅ Pas de régression de vitesse : l'écart vu sous Eden (163 ms puis 90 ms
-  par image) venait des machines GitHub ; test A/B fait (cache SD seul
-  coupé : 120 ms ; tout actif : 70 ms, le plus rapide). Le log affiche
-  maintenant toutes les 2 s une ligne `[perf]` (temps de `nativeRender`, de
-  l'affichage, appels JNI, lectures et attentes par image) : sur console,
-  elle dira d'où vient le plafond à 30 i/s.
-- 🟡 `ArgumentOutOfRangeException` dans `UI/Navigate` : cause probable
-  trouvée dans les sources — la liste *Résolution* des options était vide
-  (même cause que les réglages à 0, voir DECISIONS 31) et gauche/droite
-  dessus levait l'exception. Corrigé avec `getSupportedModes` ; si elle
-  revient, il me faut les lignes exactes du `debug.log` et l'écran où
-  c'était.
+## Night of Oct 26-27 (v0.1.9) — to be verified on console
+Verified under Eden (CI, two successive boots on the same SD):
+- ✅ **Float settings kept**: first launch `F Graphics_HudScale 8`,
+  volumes 0.75 / 0.5 / 0.75, `Graphics_MaxFPS 60`; relaunch:
+  `getFloat 'Graphics_HudScale' -> 8`, etc. Actual cause: empty resolution
+  list → the game's default values were never set (DECISIONS 31).
+  The tiny HUD came from there (game default = 8 = slider maximum).
+- ✅ **Loading screen** during frames 0-1: `[load] loading
+  screen: 217 frames over 18601 ms`, visible in the screenshots from 9 to 25 s
+  (title, wheel of squares, bar).
+- 🟡 **Picture loading screen** (v0.1.10): Infenek logo, 5 screenshots
+  cross-fading with a slow zoom, game logo, rounded bar. Rendering verified
+  on PC (`tools/splash_preview`) and under Eden (`5/5 picture(s) shown`, menus
+  reached afterwards, loading time unchanged); images downloaded by the
+  CI, never committed. Under Eden the first shader (with `return`
+  statements) crashed the emulator: replaced by a branchless shader.
+  To be checked on console.
+- ✅ **SD read cache** active (`[io] block cache ON`), per-file statistics
+  in the log; no slow reads under Eden (the emulator's SD
+  is an SSD: the real gain will be measured on console).
+- 🟡 **Switch keyboard**: hooked up (`showSoftInput` → swkbd), but not
+  triggered by the CI's scripted presses: to be tried on console
+  (nickname, chat). It only opens right after a press or a touch, so
+  that the game's keyboard (which requests the keyboard again every frame)
+  does not reopen it in a loop.
+- 🟡 `Class.forName` returns the real class, `Call*MethodA` receive their
+  arguments: no regression seen under Eden (menus, network, audio
+  initialized), to be confirmed on console.
+- ✅ No speed regression: the gap seen under Eden (163 ms then 90 ms
+  per frame) came from the GitHub machines; A/B test done (SD cache alone
+  turned off: 120 ms; everything on: 70 ms, the fastest). The log now
+  shows a `[perf]` line every 2 s (time spent in `nativeRender`, in
+  display, JNI calls, reads and waits per frame): on console,
+  it will tell where the 30 fps cap comes from.
+- 🟡 `ArgumentOutOfRangeException` in `UI/Navigate`: probable cause
+  found in the sources — the *Resolution* list in the options was empty
+  (same cause as the settings at 0, see DECISIONS 31) and left/right
+  on it threw the exception. Fixed with `getSupportedModes`; if it
+  comes back, I need the exact lines from `debug.log` and the screen where
+  it happened.
 
-## Sur console, 27-28/10 (v0.1.10 → v0.1.12)
-Vérifié sur la vraie Switch avec la v0.1.10 (données android-build 255db44) :
-- ✅ **Écran de chargement en images** : `5/5 picture(s) shown`, ~25 s.
-  Les ~4 premières secondes restent noires : l'écran attend le contexte GL
-  d'Unity (`[load] loading screen on` à 4,3 s).
-- ✅ **Clavier Switch** : pseudo changé, message de chat envoyé
+## On console, Oct 27-28 (v0.1.10 → v0.1.12)
+Verified on the real Switch with v0.1.10 (android-build data 255db44):
+- ✅ **Picture loading screen**: `5/5 picture(s) shown`, ~25 s.
+  The first ~4 seconds stay black: the screen waits for Unity's GL context
+  (`[load] loading screen on` at 4.3 s).
+- ✅ **Switch keyboard**: nickname changed, chat message sent
   (`[kbd] confirmed`).
-- ✅ **~58 i/s** en partie (`target_fps` appliqué), réglages réels gardés.
-- ❌ `NullReferenceException` dans les callbacks `canceled` de `UI/Navigate`
-  au moment de `Game started!` (2e partie).
+- ✅ **~58 fps** in a match (`target_fps` applied), float settings kept.
+- ❌ `NullReferenceException` in the `canceled` callbacks of `UI/Navigate`
+  at the moment of `Game started!` (2nd match).
 
-**Plantage n° 1 — manque de mémoire au chargement d'un niveau (corrigé en
-v0.1.12).** La ligne `[mem]` (v0.1.11, toutes les 2 s : tas newlib utilisé /
-libre dans l'arène / jamais touché, overcommit engagé / réserve) a montré :
+**Crash no. 1 — out of memory when loading a level (fixed in
+v0.1.12).** The `[mem]` line (v0.1.11, every 2 s: newlib heap used /
+free in the arena / never touched, overcommit committed / pool) showed:
 ```
 65.344 [mem] newlib: in use 2275 MB, free in arena 34 MB, never touched 170 MB | oc: committed 203 MB, pool 203/896 MB
 77.565 [gpua] memalign FAILED size=131068 KB (arena live=142 MB peak=143 MB)
 77.878 Unity: Could not allocate memory: System out of memory! ... MemoryLabel: FMODSample
 ```
-Deux réserves prises au démarrage dans le tas restaient en grande partie
-vides : la réserve d'engagement de l'overcommit (896 Mo, 203 Mo utilisés) et
-l'arène GPU (512 Mo, pic de 142 à 212 Mo). v0.1.12 : `[debug] oc_pool_mb`
-(640) et `gpu_arena_mb` (320). Sur la partie suivante : `in use 1962 MB, free
-in arena 77 MB, never touched 440 MB | oc 241/640`, arène GPU 212/320. Plus
-de manque de mémoire côté jeu. Note : Unity réserve maintenant ~2,09 Go
-(« reserved: 2087566672B »), plus que la fenêtre d'overcommit (1,28 à
-1,66 Go selon le découpage) ; le surplus prend de la vraie mémoire.
+Two pools taken from the heap at startup stayed largely
+empty: the overcommit commit pool (896 MB, 203 MB used) and
+the GPU arena (512 MB, peak of 142 to 212 MB). v0.1.12: `[debug] oc_pool_mb`
+(640) and `gpu_arena_mb` (320). On the next match: `in use 1962 MB, free
+in arena 77 MB, never touched 440 MB | oc 241/640`, GPU arena 212/320. No
+more out-of-memory on the game side. Note: Unity now reserves ~2.09 GB
+("reserved: 2087566672B"), more than the overcommit window (1.28 to
+1.66 GB depending on the layout); the excess takes real memory.
 
-**Plantage n° 2 — gel complet de la console, NON résolu.** v0.1.12 : une
-partie complète (74 s → 301 s), 2e partie lancée à 312 s, gel à 442,4 s
-juste après `[gfx] swap 20700 ok`. Le watchdog s'arrête au même instant
-(dernier `alive` à la frame 20653), HOME et volume ne répondent plus, seul le
-son continue, aucun rapport Atmosphère. Le tas newlib avait ~520 Mo de libre :
-ce n'est pas le manque de mémoire du jeu. Déjà vu deux fois en début de 2e
-partie (v0.1.10). Pistes non vérifiées : service GPU système (libnx donne
-**8 Mo** de transfer memory à nvservices par défaut,
-`__nx_nv_transfermem_size = 0x800000`, jamais redéfini par le port), mémoire
-physique du pool applicatif (3 Mo libres au démarrage : tout est pris par le
-tas), contexte EGL de l'écran de chargement, 60 i/s, cache SD.
+**Crash no. 2 — full console freeze, NOT solved.** v0.1.12: one
+full match (74 s → 301 s), 2nd match started at 312 s, freeze at 442.4 s
+right after `[gfx] swap 20700 ok`. The watchdog stops at the same moment
+(last `alive` at frame 20653), HOME and volume no longer respond, only the
+sound continues, no Atmosphère report. The newlib heap had ~520 MB free:
+it is not the game running out of memory. Already seen twice at the start
+of a 2nd
+match (v0.1.10). Unverified leads: system GPU service (libnx gives
+**8 MB** of transfer memory to nvservices by default,
+`__nx_nv_transfermem_size = 0x800000`, never redefined by the port), physical
+memory of the application pool (3 MB free at startup: everything is taken by
+the heap), EGL context of the loading screen, 60 fps, SD cache.
 
-**À-coups — NON résolus, insupportables pour l'utilisateur.** Au lancement
-d'une partie : `SLOW nativeRender: 6445 ms`, puis `7637 ms` ; ensuite 300 à
-800 ms à la première apparition de chaque objet (premier champignon, premier
-bloc tapé…). Pendant l'arrêt de 6,4 s, la SD n'a lu que ~8 Mo en ~0,6 s
-(`[io] cache: … SD 46 MB in 2202 ms total`) : c'est du **calcul**, pas des
-lectures. Profil typique de la compilation de shaders à la première
-utilisation (mesa/nouveau sur l'A57) ou de l'upload de textures. À mesurer
-puis traiter (cache de programmes GL `GL_OES_get_program_binary` / cache
-disque mesa, préchauffage des shaders par Unity, etc.).
+**Stutters — NOT solved, unbearable for the user.** When a match
+starts: `SLOW nativeRender: 6445 ms`, then `7637 ms`; then 300 to
+800 ms the first time each object appears (first mushroom, first
+block hit…). During the 6.4 s stall, the SD only read ~8 MB in ~0.6 s
+(`[io] cache: … SD 46 MB in 2202 ms total`): it is **computation**, not
+reads. Typical profile of shader compilation on first
+use (mesa/nouveau on the A57) or of texture uploads. To be measured
+then addressed (GL program cache `GL_OES_get_program_binary` / mesa disk
+cache, shader prewarming by Unity, etc.).
 
-## Nuit du 27 au 28/10 (v0.1.13) — à vérifier sur console
-- 🟡 **Gel de la console** : pas reproductible sous Eden (il n'émule ni
-  nvservices ni le segment de code de nouveau). Deux causes plausibles
-  neutralisées (DECISIONS 39) : segment de code des shaders de nouveau porté
-  à 16 Mo au premier débordement au lieu de 4 évictions/réallocations
-  successives (`[video] shader_code_mb`), transfer memory de nvservices
-  portée à 32 Mo (`[debug] nv_tmem_mb`, repli 8 Mo automatique). Et de quoi
-  le voir venir : lignes `[gpu]`/`[nv]` (objets GPU, canaux, échecs, attentes
-  de fence avec l'erreur du canal), état GPU dans `[wd] alive`.
-- 🟡 **À-coups** : mesurés désormais (`[hitch]` par image lente). Sous Eden,
-  au menu : compilation GLSL ≈ 50 %, édition de liens ≈ 30 %, génération de
-  code nouveau ≈ 20 % du temps de compilation. Le mesa de devkitPro est
-  compilé **sans cache de shaders** sur Switch (vérifié dans ses sources) :
-  ni cache disque, ni `glProgramBinary`. Fait : CPU à 1785 MHz pendant les
-  compilations (`[video] compile_boost`), niveau d'optimisation nouveau
-  réglable. Proposé : reconstruire mesa avec un cache (DECISIONS 40).
-- 🟡 **Écran noir des 4 premières secondes** : le 1er essai (logo au
-  framebuffer libnx) bloquait la 1re image d'Unity sous Eden, abandonné. Fait
-  à la place (DECISIONS 41) : nous créons tôt l'unique surface EGL, avec la
-  config notée au démarrage précédent (`.eglconfig`), et la donnons à Unity.
-  Sous Eden au relancement : écran de chargement à 0,49 s, rendu à Unity à
-  2,7 s, partie normale ensuite. Le 1er démarrage après installation reste
-  noir. À valider sur console (`[video] early_splash = 0` pour couper).
-- 🟡 **NullReferenceException `UI/Navigate`** : cause trouvée (clavier du jeu
-  resté ouvert après le clavier Switch, abonné à Navigate après sa
-  destruction) ; corrigée dans le jeu (`prepare_project.py`) et dans `NxInput`
-  (clavier du jeu fermé après swkbd). Demande les nouvelles données SD.
-- ✅ Sous Eden : démarrage, menus, réglages gardés, aucune erreur nv
-  (`148 maps live, 1 channel, 0 failed`), transfer memory 32 Mo acceptée.
+## Night of Oct 27-28 (v0.1.13) — to be verified on console
+- 🟡 **Console freeze**: not reproducible under Eden (it emulates neither
+  nvservices nor nouveau's code segment). Two plausible causes
+  neutralized (DECISIONS 39): nouveau's shader code segment raised
+  to 16 MB on the first overflow instead of 4 successive evictions/reallocations
+  (`[video] shader_code_mb`), nvservices transfer memory
+  raised to 32 MB (`[debug] nv_tmem_mb`, automatic 8 MB fallback). And the
+  means to see it coming: `[gpu]`/`[nv]` lines (GPU objects, channels,
+  failures, fence waits with the channel error), GPU state in `[wd] alive`.
+- 🟡 **Stutters**: now measured (`[hitch]` per slow frame). Under Eden,
+  in the menu: GLSL compilation ≈ 50 %, linking ≈ 30 %, nouveau code
+  generation ≈ 20 % of the compile time. devkitPro's mesa is
+  built **without a shader cache** on Switch (checked in its sources):
+  neither disk cache nor `glProgramBinary`. Done: CPU at 1785 MHz during
+  compilations (`[video] compile_boost`), adjustable nouveau optimization
+  level. Proposed: rebuild mesa with a cache (DECISIONS 40).
+- 🟡 **Black screen during the first 4 seconds**: the 1st attempt (logo on
+  the libnx framebuffer) blocked Unity's 1st frame under Eden, abandoned.
+  Done instead (DECISIONS 41): we create the single EGL surface early, with
+  the config recorded at the previous boot (`.eglconfig`), and give it to
+  Unity. Under Eden on relaunch: loading screen at 0.49 s, handed over to
+  Unity at 2.7 s, normal match afterwards. The 1st boot after installation
+  stays black. To be validated on console (`[video] early_splash = 0` to
+  turn it off).
+- 🟡 **NullReferenceException in `UI/Navigate`**: cause found (the game's
+  keyboard left open after the Switch keyboard, subscribed to Navigate after
+  its destruction); fixed in the game (`prepare_project.py`) and in `NxInput`
+  (game keyboard closed after swkbd). Requires the new SD data.
+- ✅ Under Eden: boot, menus, settings kept, no nv error
+  (`148 maps live, 1 channel, 0 failed`), 32 MB transfer memory accepted.
 
-## Sur console, 28/10 au soir (v0.1.13 → v0.1.19)
-Vérifié sur la vraie Switch avec la v0.1.13 : écran de chargement dès ~0,5 s
-(dès le 2e lancement), clavier Switch, X/Y, réglages réels gardés (HUD,
-volumes), liste des langues.
+## On console, Oct 28 evening (v0.1.13 → v0.1.19)
+Verified on the real Switch with v0.1.13: loading screen from ~0.5 s
+(from the 2nd launch on), Switch keyboard, X/Y, float settings kept (HUD,
+volumes), language list.
 
-**À-coups : ce n'étaient pas les shaders, c'était `stat()` (corrigé en
-grande partie, v0.1.17).** Le `[hitch]` de la v0.1.13 ne voyait que ~0,1 s de
-GL dans une image de 24 s (`other 24064 ms`) ; la pile du watchdog (symboles
-CI) montrait UnityMain dans une IPC du service de fichiers sous
-`File::Open`/`IsDir`. Mesuré en v0.1.14 : *Room Settings* = **1728 `stat()`
-pour 14,8 s**, début de partie ~650 pour ~6 s, démarrage 3077. libnx
-`fsdev_stat` fait 5 allers-retours FS par fichier (GetEntryType, OpenFile,
-GetSize, Close, GetFileTimeStampRaw), chacun une recherche dans `Data/`
-(1570 fichiers) : ~8,6 ms. `nx_statcache.c` liste une fois chaque dossier de
-`assets/` et `il2cpp/` et répond de mémoire (y compris « absent », 4207 sur
-6947 dans une session) ; `/`, `/switch`, `/switch/mvlo` répondent « dossier ».
-Résultats console : *Room Settings* 20 s → **3-5 s**, démarrage ~25 s →
-**8 s** (sans écran de chargement). Reste : ~260 ouvertures par menu (~4,9 ms
-chacune : `fsdev_open` = OpenFile + GetFileTimeStampRaw), Unity rouvrant sans
-cesse les mêmes fichiers (un même fichier ouvert 310 fois). `[hitch]` sépare
-maintenant `file open` / `stat` / `fstat` / `access`.
+**Stutters: it wasn't the shaders, it was `stat()` (largely fixed,
+v0.1.17).** The v0.1.13 `[hitch]` only saw ~0.1 s of
+GL in a 24 s frame (`other 24064 ms`); the watchdog's stack (CI
+symbols) showed UnityMain in a file-service IPC under
+`File::Open`/`IsDir`. Measured in v0.1.14: *Room Settings* = **1728 `stat()`
+in 14.8 s**, match start ~650 in ~6 s, boot 3077. libnx's
+`fsdev_stat` makes 5 FS round trips per file (GetEntryType, OpenFile,
+GetSize, Close, GetFileTimeStampRaw), each one a lookup in `Data/`
+(1570 files): ~8.6 ms. `nx_statcache.c` lists each directory of
+`assets/` and `il2cpp/` once and answers from memory (including "absent",
+4207 out of 6947 in one session); `/`, `/switch`, `/switch/mvlo` answer
+"directory".
+Console results: *Room Settings* 20 s → **3-5 s**, boot ~25 s →
+**8 s** (without loading screen). Remaining: ~260 opens per menu (~4.9 ms
+each: `fsdev_open` = OpenFile + GetFileTimeStampRaw), with Unity reopening
+the same files over and over (one file opened 310 times). `[hitch]` now
+separates `file open` / `stat` / `fstat` / `access`.
 
-**Blocage n° 1 — le jeu se fige, la console vit (cause trouvée, NON
-corrigé).** v0.1.19, au début d'une partie : heartbeat UDP vivant, `frame`
-figé, appels réseau arrêtés, HOME fonctionne. `stall.log` :
-`[sig] tid 657 main pending 0x20000000 blocked 0x0` = le stop-the-world du GC
-attend UnityMain, qui ne passe par aucun point sûr. Pile (symboles CI) :
+**Hang no. 1 — the game freezes, the console lives on (cause found, NOT
+fixed).** v0.1.19, at the start of a match: UDP heartbeat alive, `frame`
+frozen, network calls stopped, HOME works. `stall.log`:
+`[sig] tid 657 main pending 0x20000000 blocked 0x0` = the GC stop-the-world
+is waiting for UnityMain, which goes through no safe point. Stack (CI symbols):
 `SessionRunner.Service → DeterministicSession.UpdateSimulation →
-QuantumGame.OnSimulate → TaskContext.EndFrame +0x64c`, une boucle d'attente
-de code managé (appel d'interface à chaque tour, recherche de méthode IL2CPP
-`ldur/cmp/b.ne`, aucun appel système) qui attend les workers de tâches
-Quantum… parqués par ce même GC. Interblocage. Sous Linux le signal
-interromprait la boucle. Correction attendue : que l'émulation de signaux
-puisse arrêter de force un thread qui ne joint pas de point sûr (suspension
-noyau + contexte), ou tout autre moyen sûr de livrer le signal à un thread
-qui tourne en code managé.
+QuantumGame.OnSimulate → TaskContext.EndFrame +0x64c`, a managed-code wait
+loop (interface call on every iteration, IL2CPP method lookup
+`ldur/cmp/b.ne`, no system call) that waits for the Quantum task workers…
+parked by that same GC. Deadlock. Under Linux the signal
+would interrupt the loop. Expected fix: let the signal emulation
+forcibly stop a thread that does not reach a safe point (kernel suspension
++ context), or any other safe way to deliver the signal to a thread
+running managed code.
 
-**Blocage n° 2 — gel complet de la console (cause inconnue).** HOME et
-volume morts, la musique tourne en boucle. Le heartbeat UDP (`[debug]
-netlog`, v0.1.18) **s'arrête au même instant**, alors que son thread ne fait
-que dormir, formater et envoyer (priorité 0x28, cœur 2, ni SD ni GPU) :
-c'est toute la console qui s'arrête. Dernier battement toujours sain
-(`idle` 5-30 ms, `gpu busy=0 failed=0`, `fs: idle, 16 open`). Survient après
-~7 à 13 min de jeu, en 1re comme en 3e partie, aussi avec `gc = disable`
-(26/10). **Écarté par mesure** : manque de mémoire du jeu (`[mem]` stable,
->500 Mo libres), opérations de fichiers en cours, 60 i/s, écran de chargement,
-`shader_code_mb`, `nv_tmem_mb` (test A/B 28/10 : tous coupés + 30 i/s →
-gel à ~9 min). Pistes ouvertes : interblocage dans un service système
-(réseau, audio…), emuMMC sur la même SD, priorités / cœurs des threads,
-CPU boost, autre. La v0.1.19 ajoute au heartbeat température SoC
-(~37 °C), blocs mémoire du processus (~900), ressource système (0 : le
-processus utilise celle, partagée, des applications) et appel réseau en cours.
+**Hang no. 2 — full console freeze (unknown cause).** HOME and
+volume dead, the music loops. The UDP heartbeat (`[debug]
+netlog`, v0.1.18) **stops at the same moment**, even though its thread only
+sleeps, formats and sends (priority 0x28, core 2, neither SD nor GPU):
+it is the whole console that stops. Last beat always healthy
+(`idle` 5-30 ms, `gpu busy=0 failed=0`, `fs: idle, 16 open`). Happens after
+~7 to 13 min of play, in the 1st as well as the 3rd match, also with
+`gc = disable` (Oct 26). **Ruled out by measurement**: game out of memory
+(`[mem]` stable, >500 MB free), file operations in progress, 60 fps, loading
+screen, `shader_code_mb`, `nv_tmem_mb` (A/B test Oct 28: all off + 30 fps →
+freeze at ~9 min). Open leads: deadlock in a system service
+(network, audio…), emuMMC on the same SD, thread priorities / cores,
+CPU boost, other. v0.1.19 adds to the heartbeat the SoC temperature
+(~37 °C), the process's memory blocks (~900), the system resource (0: the
+process uses the applications' shared one) and the network call in progress.
 
-Outils : `tools/switch/` (FTP avec vérification SHA-256 et reprise, MTP,
-différence d'artifacts, `resolve_stall.py` pour nommer les adresses des
-dumps avec l'artifact `mvlo-symbols`, écoute du heartbeat
+Tools: `tools/switch/` (FTP with SHA-256 verification and resume, MTP,
+artifact diff, `resolve_stall.py` to name the addresses in dumps
+with the `mvlo-symbols` artifact, heartbeat listener
 `netlog_listen.py`/`.php`).
 
-## 11/11 — dépôt public, historique regroupé
+## Nov 11 — public repository, squashed history
 
-- ✅ Historique réécrit en quelques commits sur `main` (auteur Jonathan8520) ;
-  l'ancienne branche de travail est supprimée. Les hashs de commit cités plus
-  bas (avant le 11/11) désignent l'ancien historique, gardé hors du dépôt.
-- ✅ Dépôt passé en public (minutes Actions gratuites). Le jeu n'y est
-  jamais téléchargeable : l'artifact `mvlo-sd-data-*` d'android-build est un
-  zip AES-256 (secret `SD_ARCHIVE_PASSWORD`), voir `docs/TEST.md`.
-- Crédits : LICENSE et auteur affiché dans hbmenu = Jonathan8520 (le jeu reste
-  crédité à ipodtouch0218).
+- ✅ History rewritten into a few commits on `main` (author Jonathan8520);
+  the old work branch is deleted. The commit hashes cited below
+  (before Nov 11) refer to the old history, kept outside the repository.
+- ✅ Repository made public (free Actions minutes). The game can never be
+  downloaded from it: android-build's `mvlo-sd-data-*` artifact is an
+  AES-256 zip (secret `SD_ARCHIVE_PASSWORD`), see `docs/TEST.md`.
+- Credits: LICENSE and the author shown in hbmenu = Jonathan8520 (the game
+  stays credited to ipodtouch0218).
 
-## Sur console, 09/11 soir (v0.1.45) — chat du salon au tactile
+## On console, Nov 9 evening (v0.1.45) — room chat by touch
 
-- ✅ **Chat** : après une partie, impossible de répondre « gg » (signalé par le
-  joueur). Trois défauts (DECISIONS 81) : OK du clavier Switch remplissait
-  la case sans envoyer ; toucher « Envoyer » envoyait puis rouvrait le
-  clavier (le jeu refocalise la case) ; un clavier « en attente » s'ouvrait
-  à la touche suivante n'importe où, ou laissait la case morte au bout d'une
-  minute. Vérifié en salon privé, avant et après une partie : OK envoie,
-  « Envoyer » n'ouvre plus rien, toucher la case ouvre le clavier.
-- 🟡 La case du chat reste inaccessible à la manette : la scène du jeu ne la
-  relie à rien (`BtnSendMessage` n'a pas de voisin à gauche), sur PC aussi.
-  Correction possible côté Unity (`prepare_project.py`), avec une nouvelle
-  copie des données.
+- ✅ **Chat**: after a match, impossible to reply "gg" (reported by the
+  player). Three defects (DECISIONS 81): OK on the Switch keyboard filled
+  the box without sending; touching "Send" sent and then reopened the
+  keyboard (the game refocuses the box); a "pending" keyboard opened
+  on the next touch anywhere, or left the box dead after a
+  minute. Verified in a private room, before and after a match: OK sends,
+  "Send" no longer opens anything, touching the box opens the keyboard.
+- 🟡 The chat box remains unreachable with the controller: the game's scene
+  links it to nothing (`BtnSendMessage` has no left neighbor), on PC too.
+  Possible fix on the Unity side (`prepare_project.py`), with a new
+  copy of the data.
 
-## Sur console, 09/11 (v0.1.44) — plus de threads après ~1 h en ligne
+## On console, Nov 9 (v0.1.44) — no more threads after ~1 h online
 
-- ✅ **v0.1.43 en ligne (08/11)** : deux sessions de 74 min (14 parties) et
-  44 min (10 parties), 30 i/s, aucun plantage du jeu. Cache des replays :
-  22 sur 25 depuis la mémoire, 2-23 ms. Le seul rapport de plantage de la
-  journée est celui de l'appli HB App Store, pas du jeu.
-- ✅ **« Thread creation failed » après 74 min** : en se reconnectant à Photon,
-  le jeu n'a pas pu créer le thread de sa connexion et est resté hors ligne.
-  Le processus a 96 threads ; les threads détachés du moteur n'étaient
-  jamais fermés (libnx n'a pas de `pthread_detach`) et gardaient leur place
-  et leur pile de 2 Mo. Corrigé en v0.1.44 (DECISIONS 80).
-- ✅ Vérifié sur console (v0.1.44, 4 reconnexions, un salon privé, une
-  partie, retour au salon) : 58 threads créés, 17 fermés par le ramasseur, 7
-  joints, 67/96 occupés et stables (la v0.1.43 en serait à 84) ; sortie
-  propre.
+- ✅ **v0.1.43 online (Nov 8)**: two sessions of 74 min (14 matches) and
+  44 min (10 matches), 30 fps, no game crash. Replay cache:
+  22 out of 25 from memory, 2-23 ms. The only crash report of the
+  day is from the HB App Store app, not from the game.
+- ✅ **"Thread creation failed" after 74 min**: when reconnecting to Photon,
+  the game could not create its connection thread and stayed offline.
+  The process has 96 threads; the engine's detached threads were
+  never closed (libnx has no `pthread_detach`) and kept their slot
+  and their 2 MB stack. Fixed in v0.1.44 (DECISIONS 80).
+- ✅ Verified on console (v0.1.44, 4 reconnections, a private room, a
+  match, back to the room): 58 threads created, 17 closed by the reaper, 7
+  joined, 67/96 in use and stable (v0.1.43 would be at 84); clean
+  exit.
 
-## Sur console, 08/11 (v0.1.43) — plantage au lancement corrigé
+## On console, Nov 8 (v0.1.43) — launch crash fixed
 
-- ✅ **v0.1.42 a planté une fois au lancement** (08/11, avant « Jouer »,
-  rapport Atmosphère `01794139211_…`). Ce n'était pas le jeu : le watchdog
-  (`diag.c`) décrivait tous les threads parce que la frame 1 du chargement
-  dure 3,6-4,4 s (seuil 3 s, rapport à 82 lancements sur 84, ~8 s
-  d'écritures sur la carte), et il a lu la pile d'un thread court qui venait
-  de se terminer (pile démappée). Corrigé en v0.1.43 (DECISIONS 79) : seuil
-  de 20 s pendant les frames 0-1, pile lue pendant que le thread est en
-  pause, et un plantage du watchdog n'arrête plus que lui.
-- ✅ Vérifié sur console : une version de test qui provoque le rapport puis
-  une faute dans le watchdog continue jusqu'au menu et quitte proprement ;
-  la v0.1.43 démarre sans rapport du watchdog, menu principal, sortie propre.
+- ✅ **v0.1.42 crashed once at launch** (Nov 8, before "Play",
+  Atmosphère report `01794139211_…`). It was not the game: the watchdog
+  (`diag.c`) was describing all threads because frame 1 of loading
+  lasts 3.6-4.4 s (3 s threshold, report on 82 launches out of 84, ~8 s
+  of writes to the card), and it read the stack of a short thread that had
+  just ended (stack unmapped). Fixed in v0.1.43 (DECISIONS 79): threshold
+  of 20 s during frames 0-1, stack read while the thread is
+  paused, and a crash of the watchdog now stops only the watchdog.
+- ✅ Verified on console: a test build that triggers the report and then
+  a fault in the watchdog keeps going to the menu and exits cleanly;
+  v0.1.43 boots without a watchdog report, main menu, clean exit.
 
-## Sur console, 05/11 (v0.1.40) — validée en ligne, sortie sans erreur
+## On console, Nov 5 (v0.1.40) — validated online, exit without error
 
-- ✅ **52 min en ligne** (04→05/11, Jungle comprise) : aucun plantage, 30 i/s
-  stables en partie (le réglage 60 i/s donne 40-48 i/s en partie : limite
-  CPU, le joueur reste à 30). Seules chutes : début/fin de partie (~0,4 s)
-  et un accroc de ~0,2 s en pleine partie. Réserve OC au plus haut
-  253/448 Mo, arène GPU 177 Mo, 753 Mo du tas jamais touchés.
-- ✅ **« Quitter » affichait « Vous avez quitté le logiciel car une erreur
-  est survenue »** : trois causes, toutes corrigées (DECISIONS 77). Vérifié
-  sur console, lancé par l'icône du jeu et par hbmenu : retour à l'accueil
-  sans message, aucun rapport de plantage, `debug.log` complet.
-- ✅ **v0.1.41 — fin de partie** : l'accroc « en pleine partie » de 01:13:45
-  était la sauvegarde du replay. Écriture, fermeture, commit et suppression
-  de l'ancien replay passent sur un thread ; les `stat` du dossier des
-  replays sont gardés en mémoire (DECISIONS 78). Retour au salon : 261 →
-  177 ms la première fois, 164 → 92 ms ensuite. Replays relus sans erreur
-  dans le menu « Replays ».
-- ✅ **v0.1.41 validée en ligne** (05/11 16:41-17:12, 31 min, « c'était
-  top ») : 8 fins de partie, replays de 11 à 196 Ko écrits hors du jeu en
-  37-71 ms ; gel de fin de partie 125-202 ms ; sortie propre (`exit rc=0`).
-  Le joueur ne remarque ni la fin ni le début de partie (315-443 ms, à
-  chaque partie, pendant le chargement du niveau).
-- ✅ **v0.1.42 — cache des `stat` des replays réparé** : la v0.1.41 n'en
-  servait qu'environ la moitié (28-36 ms restaient à chaque fin de partie).
-  Ensembles à 4 voies, dossiers gardés (DECISIONS 78). En salon privé : 22
-  sur 25 servis depuis la mémoire à partir de la 2e fin de partie, gel 80-84
-  ms. `stall.log` et `prof.log` (3,8 et 4,6 Mo) passent en `*.prev.log`
-  au-delà de 1 Mo. `unity/prepare_project.py` ne contient plus l'AppId
-  officiel (seulement son SHA-256).
-- 🟡 Reste en fin de partie : les 25 `stat` de la première sauvegarde d'une
-  session (~50 ms), la compression et le code du jeu.
+- ✅ **52 min online** (Nov 4→5, Jungle included): no crash, stable 30 fps
+  in matches (the 60 fps setting gives 40-48 fps in matches: CPU
+  limit, the player stays at 30). Only drops: match start/end (~0.4 s)
+  and a ~0.2 s hitch in the middle of a match. OC pool at its highest
+  253/448 MB, GPU arena 177 MB, 753 MB of the heap never touched.
+- ✅ **"Quit" showed "The software was closed because an error
+  occurred"**: three causes, all fixed (DECISIONS 77). Verified
+  on console, launched from the game icon and from hbmenu: back to the HOME
+  Menu without a message, no crash report, complete `debug.log`.
+- ✅ **v0.1.41 — match end**: the "mid-match" hitch at 01:13:45
+  was the replay save. Writing, closing, committing and deleting
+  the old replay move to a thread; the `stat`s of the replays folder are
+  kept in memory (DECISIONS 78). Back to the room: 261 →
+  177 ms the first time, 164 → 92 ms afterwards. Replays played back without
+  error in the "Replays" menu.
+- ✅ **v0.1.41 validated online** (Nov 5 16:41-17:12, 31 min, "it was
+  great"): 8 match ends, replays of 11 to 196 KB written off the game thread
+  in 37-71 ms; end-of-match freeze 125-202 ms; clean exit (`exit rc=0`).
+  The player notices neither the end nor the start of a match (315-443 ms,
+  every match, during level loading).
+- ✅ **v0.1.42 — replay `stat` cache repaired**: v0.1.41 only served
+  about half of them (28-36 ms remained at each match end).
+  4-way sets, directories kept (DECISIONS 78). In a private room: 22
+  out of 25 served from memory from the 2nd match end on, freeze 80-84
+  ms. `stall.log` and `prof.log` (3.8 and 4.6 MB) roll over to `*.prev.log`
+  beyond 1 MB. `unity/prepare_project.py` no longer contains the official
+  AppId (only its SHA-256).
+- 🟡 Remaining at match end: the 25 `stat`s of the first save of a
+  session (~50 ms), the compression and the game's code.
 
-## Sur console, 04/11 soir (v0.1.40) — à-coups en partie
+## On console, Nov 4 evening (v0.1.40) — in-match stutters
 
-Analyse du `prof.log` de la session de 27 min du 03/11 (6 parties), puis
-essais en salon privé, console pilotée par sys-botbase, `.nro` envoyé par le
-NetLoader de hbmenu (`nxlink`).
+Analysis of the `prof.log` from the 27 min session of Nov 3 (6 matches), then
+tests in a private room, console driven by sys-botbase, `.nro` sent through
+hbmenu's NetLoader (`nxlink`).
 
-| Moment | v0.1.38 (03/11) | v0.1.40 (04/11) | Cause mesurée |
+| Moment | v0.1.38 (Nov 3) | v0.1.40 (Nov 4) | Measured cause |
 |---|---|---|---|
-| Pendant le jeu | 150-375 ms, ~1 fois toutes les 1-2 min | **aucune image ≥ 100 ms en 6,6 min** (59,8 i/s) | notre `debug.log` : `fflush` → `fsFileWrite` sur UnityMain, la carte SD met parfois 150-375 ms |
-| Fin de partie (replay) | 300-700 ms (550-660 ms pour 176-255 Ko) | **354 ms** pour 210 Ko | compression gzip niveau 6 sur UnityMain (97 % de `deflate_slow`), puis écritures SD |
-| Début de partie | 0,4-0,6 s | inchangé | `FindObjectsByType` + tri du jeu, premiers shaders/textures |
+| During play | 150-375 ms, ~once every 1-2 min | **no frame ≥ 100 ms in 6.6 min** (59.8 fps) | our `debug.log`: `fflush` → `fsFileWrite` on UnityMain, the SD card sometimes takes 150-375 ms |
+| Match end (replay) | 300-700 ms (550-660 ms for 176-255 KB) | **354 ms** for 210 KB | gzip level 6 compression on UnityMain (97 % in `deflate_slow`), then SD writes |
+| Match start | 0.4-0.6 s | unchanged | `FindObjectsByType` + the game's sorting, first shaders/textures |
 
-- ✅ **Journal asynchrone** : `debugPrintf` écrit dans une file en mémoire,
-  un thread « log » l'écrit sur la carte (DECISIONS 74). Les lignes
-  périodiques `[loop]`/`[gpua]`/`[gfx]` du rendu forçaient une écriture SD sur
-  le thread du jeu.
-- ✅ **`[debug] zlib_level = 1`** : le niveau de gzip d'IL2CPP est codé en dur
-  (6) ; patché à 1 au chargement (DECISIONS 73). Sur un vrai replay :
-  3,7× plus rapide, 12 % plus gros.
-- ✅ **Mémoire par défaut** `oc_pool_mb = 448`, `gpu_arena_mb = 256` (avant
-  640/320, seulement dans le `mvlo.ini` depuis le 03/11) ; la réserve OC
-  **s'agrandit** au lieu de laisser Unity écrire dans une page non allouée
-  (DECISIONS 72). Vérifié avec une réserve de 128 Mo : 128 → 160 → 192 →
-  224 Mo, aucun plantage.
-- 🟡 Reste : fin de partie (41 % d'écritures SD, 16 % de compression),
-  début de partie, création du salon (0,7 + 0,9 s, sans importance d'après
-  le joueur). Mode station (1080p) jamais testé ; la réserve GPU monte à
-  219 Mo sur 256 en portable.
+- ✅ **Asynchronous log**: `debugPrintf` writes to an in-memory queue, and a
+  "log" thread writes it to the card (DECISIONS 74). The periodic
+  `[loop]`/`[gpua]`/`[gfx]` lines from rendering forced an SD write on
+  the game thread.
+- ✅ **`[debug] zlib_level = 1`**: IL2CPP's gzip level is hard-coded
+  (6); patched to 1 at load time (DECISIONS 73). On a real replay:
+  3.7× faster, 12 % larger.
+- ✅ **Default memory** `oc_pool_mb = 448`, `gpu_arena_mb = 256` (previously
+  640/320, only in `mvlo.ini` since Nov 3); the OC pool
+  **grows** instead of letting Unity write to an unallocated page
+  (DECISIONS 72). Verified with a 128 MB pool: 128 → 160 → 192 →
+  224 MB, no crash.
+- 🟡 Remaining: match end (41 % SD writes, 16 % compression),
+  match start, room creation (0.7 + 0.9 s, unimportant according to
+  the player). Docked mode (1080p) never tested; the GPU pool rises to
+  219 MB out of 256 in handheld.
 
-## Sur console, 03/11 → 04/11 nuit (v0.1.38 + données Unity 61a2f02 → 44ab3d5)
+## On console, Nov 3 → Nov 4 night (v0.1.38 + Unity data 61a2f02 → 44ab3d5)
 
-- ✅ **Arrivées/départs** : `Regex.CacheSize = 128` (DECISIONS 70), 26
-  arrivées/départs en 27 min, aucun à-coup.
-- ✅ **Crash « Jungle » en ligne** (2 fois) : `[gpua] memalign FAILED
-  size=131068 KB`, newlib à court de mémoire contiguë (DECISIONS 71).
-  Contourné par `oc_pool_mb = 448` / `gpu_arena_mb = 256` dans `mvlo.ini` :
-  ~630 Mo jamais touchés au lieu de 136-168, 5 parties sans échec.
-- ❌ v0.1.39 (n'allouer que 64 Mo de ces réservations de 128 Mo) : plantage
-  au démarrage, retirée (DECISIONS 71).
-- ❌ Préchauffage IL2CPP sur le menu (e4c6472, 44ab3d5) : sans effet sur la
-  création du salon, 0,74 + 0,90 s (DECISIONS 75).
-- ✅ *Room Settings* ~0,35 s, lancement de partie ~0,55 s. À 60 i/s une image
-  de match coûte 20-23 ms de CPU : 40-50 i/s irréguliers ; 30 conseillé.
+- ✅ **Joins/leaves**: `Regex.CacheSize = 128` (DECISIONS 70), 26
+  joins/leaves in 27 min, no stutter.
+- ✅ **"Jungle" crash online** (2 times): `[gpua] memalign FAILED
+  size=131068 KB`, newlib short of contiguous memory (DECISIONS 71).
+  Worked around with `oc_pool_mb = 448` / `gpu_arena_mb = 256` in `mvlo.ini`:
+  ~630 MB never touched instead of 136-168, 5 matches without failure.
+- ❌ v0.1.39 (allocate only 64 MB of these 128 MB reservations): crash
+  at boot, withdrawn (DECISIONS 71).
+- ❌ IL2CPP prewarming on the menu (e4c6472, 44ab3d5): no effect on
+  room creation, 0.74 + 0.90 s (DECISIONS 75).
+- ✅ *Room Settings* ~0.35 s, match launch ~0.55 s. At 60 fps a match
+  frame costs 20-23 ms of CPU: irregular 40-50 fps; 30 recommended.
 
-## Sur console, 02/11 soir (v0.1.31 → v0.1.37) — à-coups des premières fois
+## On console, Nov 2 evening (v0.1.31 → v0.1.37) — first-time stutters
 
-Mesuré avec un profileur par échantillonnage (`[debug] prof_ms`, `nx_prof.c`,
-`tools/switch/prof_report.py`) dans un salon privé, console pilotée par
-sys-botbase ; le match joué à la manette.
+Measured with a sampling profiler (`[debug] prof_ms`, `nx_prof.c`,
+`tools/switch/prof_report.py`) in a private room, console driven by
+sys-botbase; the match played with the controller.
 
-| Moment | v0.1.30 | v0.1.37 | Cause mesurée |
+| Moment | v0.1.30 | v0.1.37 | Measured cause |
 |---|---|---|---|
-| 1er *Room Settings* | 2,1 s | **1,1 s** | 78 % d'attente du service fs : horodatages à chaque ouverture (27 %), ouvertures (23 %), lectures (21 %) |
-| Lancement du 1er match | ~1,9 s | **~1,15 s** (3 images plus courtes) | mêmes ouvertures/lectures, sur UnityMain et les chargeurs |
-| En match (objets, etc.) | 190-310 ms, 3 fois en 5 min | **aucun ≥ 150 ms en 21 min** | UnityMain bloqué dans l'envoi UDP de Photon (`bsdSend` lent) |
-| Création du salon | 0,7 + 1,0 s | inchangé | IL2CPP initialise ses génériques au premier usage (CPU, pas de fichiers) |
+| 1st *Room Settings* | 2.1 s | **1.1 s** | 78 % waiting on the fs service: timestamps on every open (27 %), opens (23 %), reads (21 %) |
+| Launch of the 1st match | ~1.9 s | **~1.15 s** (3 shorter frames) | same opens/reads, on UnityMain and the loaders |
+| In a match (objects, etc.) | 190-310 ms, 3 times in 5 min | **none ≥ 150 ms in 21 min** | UnityMain blocked in Photon's UDP send (slow `bsdSend`) |
+| Room creation | 0.7 + 1.0 s | unchanged | IL2CPP initializes its generics on first use (CPU, no files) |
 
-- ✅ `[io] open_timestamps = 0` : `fsFsGetFileTimeStampRaw` (libnx le demande
-  après chaque `open`) n'est plus envoyé pour les données du jeu.
-- ✅ `[io] preload_kb = 1024` : depuis le menu principal, les 1 540 fichiers de
-  `Data/` ≤ 1 Mo (38,7 Mo, ~7 s en arrière-plan) sont gardés **en mémoire**
-  (`nx_io.c`, « RAM files ») ; leurs lectures ne touchent plus la SD.
-- ✅ `[net] async_send = 1` : les datagrammes UDP partent par une file et un
-  thread d'envoi ; le jeu n'attend plus le service réseau. 21 min de match,
-  aucune déconnexion.
-- ✅ Le gel en ligne reste corrigé : ce match de 21 min a dépassé de loin les 400 s.
-- ✅ **v0.1.38, `[io] phantom_fds = 1`** : un fichier préchargé s'ouvre sans
-  aucune requête fs (descripteur 3072-4095 servi depuis la mémoire). *Room
-  Settings* **1,1 s → 0,49 s** (202 ouvertures = 29 ms), lancement du match
-  ~1,15 s → ~0,9 s.
-- ✅ Joué en public dans le groupe officiel (`[photon] build_identifier =
-  official`, partie à 6) : ça tourne. Arrivées/départs de joueurs en pleine
-  partie : à-coups de 127-245 ms (voir DECISIONS 69).
-- 🟡 Reste : création du salon (0,7 + 1,0 s, IL2CPP) ; arrivées/départs.
+- ✅ `[io] open_timestamps = 0`: `fsFsGetFileTimeStampRaw` (libnx requests it
+  after each `open`) is no longer sent for the game data.
+- ✅ `[io] preload_kb = 1024`: from the main menu on, the 1 540 files of
+  `Data/` ≤ 1 MB (38.7 MB, ~7 s in the background) are kept **in memory**
+  (`nx_io.c`, "RAM files"); their reads no longer touch the SD.
+- ✅ `[net] async_send = 1`: UDP datagrams go out through a queue and a
+  send thread; the game no longer waits for the network service. 21 min of
+  match, no disconnection.
+- ✅ The online freeze remains fixed: this 21 min match went far past 400 s.
+- ✅ **v0.1.38, `[io] phantom_fds = 1`**: a preloaded file opens without
+  any fs request (descriptor 3072-4095 served from memory). *Room
+  Settings* **1.1 s → 0.49 s** (202 opens = 29 ms), match launch
+  ~1.15 s → ~0.9 s.
+- ✅ Played in public in the official group (`[photon] build_identifier =
+  official`, 6-player match): it runs. Players joining/leaving in the middle
+  of a match: stutters of 127-245 ms (see DECISIONS 69).
+- 🟡 Remaining: room creation (0.7 + 1.0 s, IL2CPP); joins/leaves.
 
-## Sur console, 02/11 (v0.1.27 → v0.1.30) — gel en ligne CORRIGÉ
+## On console, Nov 2 (v0.1.27 → v0.1.30) — online freeze FIXED
 
-Console pilotée depuis le PC par **sys-botbase** (`tools/switch/sbb.py` :
-boutons, captures d'écran), essais surveillés par `tools/switch/freeze_watch.sh`
-(battement, autopsie, réponse de sys-botbase). fw 22.1.0, AMS 1.11.1.
+Console driven from the PC by **sys-botbase** (`tools/switch/sbb.py`:
+buttons, screenshots), tests monitored by `tools/switch/freeze_watch.sh`
+(heartbeat, autopsy, sys-botbase response). fw 22.1.0, AMS 1.11.1.
 
-| Essai | Version, réglage | Résultat |
+| Test | Version, setting | Result |
 |---|---|---|
-| 1. `udp_soak` → PC du réseau local (libnx brut, 20 paquets/s), menu | 0.1.27 | pas de gel en 24 min |
-| 2. « Jouer » + `udp_unconnected = 1` | 0.1.27 | **gel** à ~400 s cumulées (US 51 s puis EU) |
-| 3. « Jouer » + `chiaki_cfg = 1` (16 sessions bsd acceptées par la console) | 0.1.27 | **gel** à ~400 s |
-| 4. `udp_soak` par notre couche socket → DNS 1.1.1.1 (Internet), 5/s, menu | 0.1.28 | pas de gel en 10 min |
-| 5. « Jouer », compteur de requêtes IPC par service | 0.1.29 | **gel** à ~400 s : cause trouvée |
-| 6. « Jouer », `/dev/urandom` servi par le CSPRNG | **0.1.30** | ✅ **pas de gel en 11 min 40** |
+| 1. `udp_soak` → PC on the local network (raw libnx, 20 packets/s), menu | 0.1.27 | no freeze in 24 min |
+| 2. "Play" + `udp_unconnected = 1` | 0.1.27 | **freeze** at ~400 s cumulative (US 51 s then EU) |
+| 3. "Play" + `chiaki_cfg = 1` (16 bsd sessions accepted by the console) | 0.1.27 | **freeze** at ~400 s |
+| 4. `udp_soak` through our socket layer → DNS 1.1.1.1 (Internet), 5/s, menu | 0.1.28 | no freeze in 10 min |
+| 5. "Play", IPC request counter per service | 0.1.29 | **freeze** at ~400 s: cause found |
+| 6. "Play", `/dev/urandom` served by the CSPRNG | **0.1.30** | ✅ **no freeze in 11 min 40** |
 
-- ✅ **Cause** : `/dev/urandom` était émulé par un **fichier de 64 Ko** sur la
-  SD (`.synth_dev_random`, `open_fake`), lu par le service fs. IL2CPP garde le
-  fd ouvert ; Photon y puise ~160 octets/s une fois connecté ; vers **~400 s**
-  le fichier arrive à la fin et `il2cpp::os::Cryptography::FillBufferWithRandomBytes`
-  reboucle sur `read() == 0` : **~7 000 lectures fs/s** (autopsie : 129 520
-  requêtes fs contre ~23 000 attendues). fs (cœur 3) sature et **affame les
-  autres services du cœur 3** : réseau de **toute la console** (sys-botbase
-  refuse les connexions, le ping échoue), nifm ; `UnityMain` reste bloqué dans
-  une écriture fs → image figée. Tout repart quand notre processus meurt.
-  Explique tout : compte cumulé par processus (le fd reste ouvert), rien hors
-  connexion (le menu ne tire pas d'aléatoire), remise à zéro à chaque
-  lancement, le soak qui ne gèle jamais.
-- ✅ **Correctif (v0.1.30)** : `read_fake` sert les fd de `/dev/urandom` et
-  `/dev/random` avec `randomGet()` (sans fin, sans accès SD). Dans « Jouer »,
-  les requêtes fs retombent de 46/s à 7,5/s (le niveau du menu).
-- ❌ Les trois correctifs de la v0.1.27 (`udp_unconnected`, `chiaki_cfg`,
-  `photon_rebind_s` non essayé) ne changeaient rien : laissés, off par défaut.
-- 🟡 Diagnostics ajoutés (v0.1.28-29) : `[debug] udp_soak_layer/_dns/_hz/_reuse`,
-  log des `setsockopt` (Photon ne pose que `SO_REUSEADDR`), **compteur de
-  requêtes IPC par session** (`ipc/10s:` dans le battement, totaux dans
-  l'autopsie). `udp_echo.php` affiche enfin son débit sous trafic continu.
-- 📋 À confirmer : un vrai match de plus de 7 min.
+- ✅ **Cause**: `/dev/urandom` was emulated by a **64 KB file** on the
+  SD (`.synth_dev_random`, `open_fake`), read through the fs service. IL2CPP
+  keeps the fd open; Photon draws ~160 bytes/s from it once connected; around
+  **~400 s** the file reaches its end and `il2cpp::os::Cryptography::FillBufferWithRandomBytes`
+  loops on `read() == 0`: **~7 000 fs reads/s** (autopsy: 129 520
+  fs requests versus ~23 000 expected). fs (core 3) saturates and **starves
+  the other services on core 3**: networking for **the whole console**
+  (sys-botbase refuses connections, ping fails), nifm; `UnityMain` stays
+  blocked in an fs write → frozen frame. Everything resumes when our process
+  dies. This explains everything: count accumulated per process (the fd stays
+  open), nothing while offline (the menu draws no randomness), reset at
+  every launch, the soak that never freezes.
+- ✅ **Fix (v0.1.30)**: `read_fake` serves the fds of `/dev/urandom` and
+  `/dev/random` with `randomGet()` (endless, no SD access). In "Play",
+  fs requests drop from 46/s to 7.5/s (the menu's level).
+- ❌ The three fixes of v0.1.27 (`udp_unconnected`, `chiaki_cfg`,
+  `photon_rebind_s` not tried) changed nothing: left in, off by default.
+- 🟡 Diagnostics added (v0.1.28-29): `[debug] udp_soak_layer/_dns/_hz/_reuse`,
+  logging of `setsockopt` (Photon only sets `SO_REUSEADDR`), **IPC request
+  counter per session** (`ipc/10s:` in the heartbeat, totals in
+  the autopsy). `udp_echo.php` finally shows its throughput under continuous
+  traffic.
+- 📋 To be confirmed: a real match of more than 7 min.
 
-## Sur console, 29/10 tard (v0.1.23 → v0.1.25) — le gel cerné
+## On console, Oct 29, late (v0.1.23 → v0.1.25) — the freeze narrowed down
 
-Sept essais sur console (fw 22.1.0, salon créé seul, région eu). Gel =
-dernière image ; « connexion » = `[Network] Successfully connected to
-region` (entrée dans « Jouer », pas le menu principal, qui ne se connecte
-pas).
+Seven tests on console (fw 22.1.0, room created alone, region eu). Freeze =
+last frame; "connection" = `[Network] Successfully connected to
+region` (entering "Play", not the main menu, which does not
+connect).
 
-| Essai | Version, réglage | Connecté jusqu'au gel | Requêtes bsd au gel |
+| Test | Version, setting | Connected until the freeze | bsd requests at the freeze |
 |---|---|---|---|
-| Référence (match 30 étoiles) | 0.1.23, défaut | 394 s | 162 504 |
-| B | 0.1.23, `socket_config = 1` | ~394 s (image 11 798 contre 11 759) | 162 849 |
-| Flood sur le menu, sans Photon | 0.1.24, `bsd_flood = 2000` (polls 0 ms) | pas de gel (4 min, 400 000 requêtes) | — |
-| Écran « Jouer » seul, aucun salon | 0.1.24 | 396 s | **85 013** |
-| Connexion 6 s puis menu principal 8 min | 0.1.24 | pas de gel | — |
-| Même lancement : 109 s connecté, B 5 s, reconnecté | 0.1.24 | gel 285 s après la reconnexion = **400 s cumulées** (399 s depuis la 2e connexion) | — |
-| `local_wait = 1`, écran « Jouer » | 0.1.25 | 409 s | 442 000 (polls 0 ms) |
+| Reference (30-star match) | 0.1.23, default | 394 s | 162 504 |
+| B | 0.1.23, `socket_config = 1` | ~394 s (frame 11 798 versus 11 759) | 162 849 |
+| Flood on the menu, without Photon | 0.1.24, `bsd_flood = 2000` (0 ms polls) | no freeze (4 min, 400 000 requests) | — |
+| "Play" screen alone, no room | 0.1.24 | 396 s | **85 013** |
+| Connection 6 s then main menu 8 min | 0.1.24 | no freeze | — |
+| Same launch: 109 s connected, B 5 s, reconnected | 0.1.24 | freeze 285 s after the reconnection = **400 s cumulative** (399 s since the 2nd connection) | — |
+| `local_wait = 1`, "Play" screen | 0.1.25 | 409 s | 442 000 (0 ms polls) |
 
-Établi :
-- **Le gel vient après ~391-409 s de connexion Photon ouverte**, avec ou
-  sans salon, match, Quantum ou replays (les sessions d'avant gelaient
-  aussi avec plusieurs petits matchs dont les replays sont enregistrés).
-  Une coupure de 5 s ne remet pas le compte à zéro ; une connexion de 6 s
-  suivie de 8 min déconnecté ne déclenche rien.
-- **Pas le nombre de requêtes** (85 000 au gel dans « Jouer », 162 000 en
-  match, 400 000 sans gel en flood), **pas le temps d'attente dans bsd**
-  (`local_wait` : plus aucune attente dans le service, gel quand même),
-  **pas les requêtes mappées** (*pointer buffer* bsd **0x1000** sur console,
-  17 requêtes mappées sur 162 000, aucune près du gel), **pas les tampons**
-  (B), **pas de fuite d'objets noyau** (`rl:` plat jusqu'au gel : threads
-  65/96, tmem 3/32, sessions 1/1). Pas de `FIONREAD refused`.
-- Au gel, **bsd s'arrête en premier** : le fil de réception Photon reste
-  13,2 s dans un poll **de 0 ms** (avec `local_wait`), le battement 13,2 s
-  dans `sendto`, UnityMain 12,4 s dans `send` ; puis **fs** (watchdog 12,3
-  s, un worker IL2CPP 10 s, UnityMain 13,7 s dans l'écriture de `debug.log`
-  dans un autre essai) et **nifm** ; `am`, `time`, `ts`, `nvdrv` répondent
-  en 0-1 ms. Une fois (écran « Jouer »), les services sont repartis après
-  ~12 s, le jeu a rendu une image puis s'est rebloqué.
-- Les 128 dernières opérations bsd avant le gel sont normales (petits
-  paquets UDP Photon, réseau presque muet dans « Jouer »). Une fois, 7
-  paquets Photon de 24 octets sont arrivés ensemble ~2 s avant.
+Established:
+- **The freeze comes after ~391-409 s of open Photon connection**, with or
+  without room, match, Quantum or replays (earlier sessions also froze
+  with several short matches whose replays are saved).
+  A 5 s cut does not reset the count; a 6 s connection
+  followed by 8 min disconnected triggers nothing.
+- **Not the number of requests** (85 000 at the freeze in "Play", 162 000 in
+  a match, 400 000 without a freeze in flood), **not the wait time in bsd**
+  (`local_wait`: no more waiting in the service, freeze anyway),
+  **not the mapped requests** (bsd *pointer buffer* **0x1000** on console,
+  17 mapped requests out of 162 000, none near the freeze), **not the
+  buffers** (B), **no kernel object leak** (`rl:` flat until the freeze:
+  threads 65/96, tmem 3/32, sessions 1/1). No `FIONREAD refused`.
+- At the freeze, **bsd stops first**: the Photon receive thread stays
+  13.2 s in a **0 ms** poll (with `local_wait`), the heartbeat 13.2 s
+  in `sendto`, UnityMain 12.4 s in `send`; then **fs** (watchdog 12.3
+  s, an IL2CPP worker 10 s, UnityMain 13.7 s in the `debug.log` write
+  in another test) and **nifm**; `am`, `time`, `ts`, `nvdrv` respond
+  in 0-1 ms. Once ("Play" screen), the services came back after
+  ~12 s, the game rendered one frame and then blocked again.
+- The last 128 bsd operations before the freeze are normal (small
+  Photon UDP packets, network almost silent in "Play"). Once, 7
+  Photon packets of 24 bytes arrived together ~2 s before.
 
-Piste ouverte (non prouvée) : **un service système tourne en boucle** à
-cause de notre socket UDP connectée après ~400 s (bsd lui-même ?) et prive
-de CPU les services de priorité plus basse du cœur système (bsd, fs, nifm,
-puis hid) ; notre sortie ferme la socket et tout repart. Ou un événement
-du serveur Photon vers ~400 s que la pile réseau de la console gère mal.
+Open lead (not proven): **a system service spins in a loop** because of
+our connected UDP socket after ~400 s (bsd itself?) and starves of CPU
+the lower-priority services of the system core (bsd, fs, nifm,
+then hid); our exit closes the socket and everything resumes. Or an event
+from the Photon server around ~400 s that the console's network stack
+handles badly.
 
-Ajouté : `[debug] bsd_flood` / `bsd_flood_op` (DECISIONS 56),
-`[net] local_wait` (DECISIONS 57), version 0.1.25 (build local).
+Added: `[debug] bsd_flood` / `bsd_flood_op` (DECISIONS 56),
+`[net] local_wait` (DECISIONS 57), version 0.1.25 (local build).
 
-## Nuit du 30/10 (v0.1.27, session cloud) — correctifs candidats
+## Night of Oct 30 (v0.1.27, cloud session) — candidate fixes
 
-Suite de la recherche (DECISIONS 61, sources) et **trois correctifs à tester**
-demain, tous derrière un interrupteur `[net]`, défaut off ; build propre,
-auto-test Eden OK (chiaki config appliquée, 16 sessions acceptées sous Eden,
-`udp_unconnected` actif, pas de plantage ; défauts off = zéro changement).
+Continuation of the research (DECISIONS 61, sources) and **three fixes to
+test** tomorrow, all behind a `[net]` switch, default off; clean build,
+Eden self-test OK (chiaki config applied, 16 sessions accepted under Eden,
+`udp_unconnected` active, no crash; defaults off = zero change).
 
-- 🔎 **sys-ftpd #30** : l'ENOBUFS (« hangs the system ») vient de **transferts
-  actifs** avec tampons trop petits, pas d'une socket oisive. Les sources ne
-  décrivent **aucun** mécanisme par lequel **une** socket UDP connectée drainée
-  pourrit avec le seul temps (réception bornée puis drop ; ICMP = un `so_error`
-  unique ; poll ne retient rien ; tmem fixe). Un gel ENOBUFS à ~400 s viendrait
-  plutôt d'une **fuite de sockets/fds** ou d'une **famine de RAM système**.
-- 🔎 **chiaki-ng** (analogue UDP temps-réel) : udp 256 Ko, `sb_efficiency 8`,
-  **16 sessions** (max libnx ; la console en a 15), sans nifm.
-- 🟡 **Livré (v0.1.27)** :
-  - `[net] chiaki_cfg` : config socket chiaki (gros tampons UDP, 16 sessions,
-    repli si refus) ;
-  - `[net] udp_unconnected` : garder la socket UDP **non connectée** au niveau
-    bsd (sendto/recvfrom filtré) — le correctif le plus probable si c'est la
-    socket connectée qui pourrit ;
-  - `[net] photon_rebind_s = N` : socket fraîche sous le même fd à N s (nouveau
-    port source ; **risque** de déconnexion Photon) ;
-  - **errno bsd par commande** (`err: ENOBUFS=…` dans le battement, table dans
-    l'autopsie) et **`N sock open`** dans le battement (fuite de fd = compte qui
-    grimpe).
-- 📋 Essais console : TEST.md « 4 octies » (mesures 1-2 puis correctifs a-c,
-  chacun ≤ 8 min, « Jouer » seul). L'essai « mode applet » est retiré
-  (lancement toujours en title takeover).
+- 🔎 **sys-ftpd #30**: the ENOBUFS ("hangs the system") comes from **active
+  transfers** with buffers that are too small, not from an idle socket. The
+  sources describe **no** mechanism by which **a single** drained connected
+  UDP socket rots with time alone (bounded receive then drop; ICMP = a single
+  `so_error`; poll retains nothing; fixed tmem). An ENOBUFS freeze at ~400 s
+  would rather come from a **socket/fd leak** or from **system RAM
+  starvation**.
+- 🔎 **chiaki-ng** (real-time UDP analogue): udp 256 KB, `sb_efficiency 8`,
+  **16 sessions** (libnx max; the console has 15), without nifm.
+- 🟡 **Delivered (v0.1.27)**:
+  - `[net] chiaki_cfg`: chiaki socket config (large UDP buffers, 16 sessions,
+    fallback if refused);
+  - `[net] udp_unconnected`: keep the UDP socket **unconnected** at the bsd
+    level (filtered sendto/recvfrom) — the most likely fix if it is the
+    connected socket that rots;
+  - `[net] photon_rebind_s = N`: fresh socket under the same fd at N s (new
+    source port; **risk** of Photon disconnection);
+  - **bsd errno per command** (`err: ENOBUFS=…` in the heartbeat, table in
+    the autopsy) and **`N sock open`** in the heartbeat (fd leak = a count
+    that climbs).
+- 📋 Console tests: TEST.md "4 octies" (measurements 1-2 then fixes a-c,
+  each ≤ 8 min, "Play" only). The "applet mode" test is withdrawn
+  (launch always in title takeover).
 
-## Nuit du 30/10 (v0.1.26, session cloud) — recherche + instrumentation
+## Night of Oct 30 (v0.1.26, cloud session) — research + instrumentation
 
-Recherche approfondie du gel ~400 s (4 sous-agents, sources dans DECISIONS 58 :
-libnx, Mesosphère, sources Photon du jeu, switchbrew, issues). Résultats :
+In-depth research on the ~400 s freeze (4 sub-agents, sources in DECISIONS 58:
+libnx, Mesosphère, the game's Photon sources, switchbrew, issues). Results:
 
-- 🔎 **Photon n'a aucun événement à ~400 s** : tous ses timers sont ≤ 60 s
-  (service 10 ms, ping 1 s, LobbyStats 60 s, DisconnectTimeout 10 s) ou = 1 h
-  (jeton). Quantum 3.0.13 / Realtime 5.1.15. Le déclencheur n'est donc **pas**
-  un événement applicatif Photon → c'est très probablement la **pile réseau de
-  la console** face à notre socket UDP connectée de longue durée.
-- 🔎 **Pourquoi bsd d'abord, puis nifm** : le processus `bsdsocket` héberge bsd
-  **et le DNS (sfdnsres)** ; nifm (séparé) fait son test de connexion via
-  bsdsocket (libcurl+socket/ssl). bsd tombe → nifm se bloque. **fs** (séparé,
-  cœur 3, sans réseau) qui gèle aussi n'est pas expliqué par le réseau.
-- 🔎 **Ordonnanceur strictement prioritaire par cœur, sans partage de temps
-  entre priorités** : une famine est possible, **mais serait immédiate, pas à
-  400 s** ; aucune fuite d'objet noyau/session/thread trouvée pour une seule
-  socket. FS est sur le cœur 3, nous sur 0-2. **Aucun mécanisme simple
-  n'explique seul le délai de 400 s** (conclusion honnête, DECISIONS 58f).
-- 🔎 **nifm déclassé** : `socketInitializeDefault` n'appelle pas nifm et quasi
-  aucun homebrew ne soumet de requête nifm (la norme) ; le correctif nifm n'est
-  donc pas codé. Analogue le plus proche : chiaki-ng (16 sessions bsd, gros
-  tampons UDP). Depuis 18.0.0, **15 sessions bsd:u pour toute la console**.
-  RetroArch Switch gèle « après 10-15 min » en **mode applet**, pas en mode
-  application → test gratuit ajouté.
-- 🟡 **Livré (v0.1.26, défauts à off, build propre, auto-test Eden OK)** :
-  - `[debug] photon_ring` : anneau des 30 dernières s de datagrammes Photon
-    (sens, taille, 16 premiers octets) dans l'autopsie et `debug.log` ;
-  - `[debug] udp_soak = ip:port` (+ `udp_soak_connect`) : imite le trafic
-    Photon **sans Photon** vers un écho PC — l'expérience décisive
-    pile-réseau / Photon ;
-  - `tools/switch/udp_echo.php` : l'écho UDP côté PC (comme netlog, en PHP).
-- 📋 **Spec** (non codée, filtre de sécurité, pour la session locale) : mesure
-  au gel si bsd/fs/nifm sont *runnable mais affamés* ou *bloqués en IPC*
-  (svcDebugActiveProcess via pmdmnt), et correctifs candidats (poll_yield,
-  renouvellement de socket) — DECISIONS 59.
-- 📋 **Essais console** dans TEST.md « 4 octies » : 1) udp_soak sur le menu,
-  2) applet vs application, 3) photon_ring au gel, 4) bsd_sessions A/B.
+- 🔎 **Photon has no event at ~400 s**: all its timers are ≤ 60 s
+  (service 10 ms, ping 1 s, LobbyStats 60 s, DisconnectTimeout 10 s) or = 1 h
+  (token). Quantum 3.0.13 / Realtime 5.1.15. The trigger is therefore **not**
+  a Photon application event → it is very likely the **console's network
+  stack** facing our long-lived connected UDP socket.
+- 🔎 **Why bsd first, then nifm**: the `bsdsocket` process hosts bsd
+  **and DNS (sfdnsres)**; nifm (separate) runs its connection test through
+  bsdsocket (libcurl+socket/ssl). bsd goes down → nifm blocks. **fs**
+  (separate, core 3, no network), which freezes too, is not explained by the
+  network.
+- 🔎 **Strictly priority-based scheduler per core, with no time sharing
+  between priorities**: starvation is possible, **but would be immediate,
+  not at 400 s**; no kernel object/session/thread leak found for a single
+  socket. FS is on core 3, we are on 0-2. **No simple mechanism alone
+  explains the 400 s delay** (honest conclusion, DECISIONS 58f).
+- 🔎 **nifm downgraded**: `socketInitializeDefault` does not call nifm and
+  almost no homebrew submits a nifm request (the norm); the nifm fix is
+  therefore not coded. Closest analogue: chiaki-ng (16 bsd sessions, large
+  UDP buffers). Since 18.0.0, **15 bsd:u sessions for the whole console**.
+  RetroArch Switch freezes "after 10-15 min" in **applet mode**, not in
+  application mode → free test added.
+- 🟡 **Delivered (v0.1.26, defaults off, clean build, Eden self-test OK)**:
+  - `[debug] photon_ring`: ring of the last 30 s of Photon datagrams
+    (direction, size, first 16 bytes) in the autopsy and `debug.log`;
+  - `[debug] udp_soak = ip:port` (+ `udp_soak_connect`): mimics Photon
+    traffic **without Photon** towards a PC echo — the decisive
+    network stack / Photon experiment;
+  - `tools/switch/udp_echo.php`: the PC-side UDP echo (like netlog, in PHP).
+- 📋 **Spec** (not coded, safety filter, for the local session): measure at
+  the freeze whether bsd/fs/nifm are *runnable but starved* or *blocked in
+  IPC* (svcDebugActiveProcess via pmdmnt), and candidate fixes (poll_yield,
+  socket renewal) — DECISIONS 59.
+- 📋 **Console tests** in TEST.md "4 octies": 1) udp_soak on the menu,
+  2) applet vs application, 3) photon_ring at the freeze, 4) bsd_sessions A/B.
 
-## Soir du 29/10 (v0.1.23, session cloud) — mesures et essais A/B du gel
+## Evening of Oct 29 (v0.1.23, cloud session) — freeze measurements and A/B tests
 
-- 📏 **Requêtes bsd mesurées** (`nx_bsdmon.c`, DECISIONS 54) : par commande
-  (nombre, échecs, octets, temps, **mappées** ou copiées), anneau des 128
-  dernières opérations ; dans le battement (`bsd:`), l'autopsie et
-  `debug.log` (`[net] bsd requests per command`, toutes les 1800 images).
-  Limites de ressources du processus dans le battement (`rl:` threads,
-  événements, transfer memory, sessions, mémoire).
-- 🔀 **Interrupteurs `[net]`** pour les essais A/B, tous à l'ancien
-  comportement par défaut : `small_ipc`, `socket_config`, `bsd_sessions`,
+- 📏 **bsd requests measured** (`nx_bsdmon.c`, DECISIONS 54): per command
+  (count, failures, bytes, time, **mapped** or copied), ring of the last 128
+  operations; in the heartbeat (`bsd:`), the autopsy and
+  `debug.log` (`[net] bsd requests per command`, every 1800 frames).
+  Process resource limits in the heartbeat (`rl:` threads,
+  events, transfer memory, sessions, memory).
+- 🔀 **`[net]` switches** for the A/B tests, all set to the old
+  behavior by default: `small_ipc`, `socket_config`, `bsd_sessions`,
   `poll_slice_ms = 0`.
-- 🔎 Lu : *pointer buffer* bsd 0x8000 sous Eden ; notre repli `FIONREAD`
-  lisait 64 Ko (toujours mappé) ; un processus `sysres=0` prend ses tables
-  de pages dans le tas partagé avec les processus système (Mesosphère).
-  Pistes, pas de cause prouvée.
-- ✅ Sous Eden (CI) : 10 min de jeu + relancement avec `small_ipc = 1`,
-  auto-tests et GC forcé `PASSED`, 1172 battements avec `bsd:` (1429
-  requêtes, 0 mappée : sans AppId, peu de trafic sous Eden).
-- ⏸ Regroupement des petits fichiers de `Data/` : reporté (DECISIONS 55).
+- 🔎 Read: bsd *pointer buffer* 0x8000 under Eden; our `FIONREAD` fallback
+  read 64 KB (always mapped); a `sysres=0` process takes its page tables
+  from the heap shared with the system processes (Mesosphère).
+  Leads, no proven cause.
+- ✅ Under Eden (CI): 10 min of play + relaunch with `small_ipc = 1`,
+  self-tests and forced GC `PASSED`, 1172 heartbeats with `bsd:` (1429
+  requests, 0 mapped: without an AppId, little traffic under Eden).
+- ⏸ Grouping of the small files of `Data/`: postponed (DECISIONS 55).
 
-## Sur console, 29/10 au soir (v0.1.20 → v0.1.22)
-v0.1.20 et v0.1.21 installées et testées : Room Settings ~3 s, stats
-presque gratuits (frame 484 : 1904 stats en 15 ms), il reste ~250
-ouvertures de fichiers ouverts une seule fois (4,5 ms chacune) et le
-« other » d'Unity aux premiers affichages. La suspension forcée du GC n'a
-jamais servi en vrai (`forced 0` sur toutes les sessions).
+## On console, Oct 29 evening (v0.1.20 → v0.1.22)
+v0.1.20 and v0.1.21 installed and tested: Room Settings ~3 s, stats
+almost free (frame 484: 1904 stats in 15 ms), there remain ~250
+opens of files opened only once (4.5 ms each) and Unity's
+"other" on first displays. The forced GC suspension never
+actually came into play (`forced 0` in every session).
 
-**Le « gel de toute la console » vient de notre processus.** Cinq
-reproductions :
-- toujours **~390-420 s après la première connexion à Photon** (0.1.18 :
-  397 s ; 0.1.20 : 391 ; 0.1.21 : 395 ; 0.1.22 : 402 et ~419), pas après le
-  lancement : 10 min sur le menu principal sans réseau (133 appels) n'ont
-  rien donné, puis gel 7 min après le début de la partie ; à ce moment
-  **157 à 162 milliers d'appels réseau** (~380/s en ligne) ;
-- autopsie (DECISIONS 51) au moment du gel : `bsd` (UnityMain dans
-  `bsdSend` 12,9 s, le thread réseau dans `bsdPoll`, le battement dans
-  `sendto`), `fs` (le watchdog dans `fsFsCreateFile` 10,9 s, sonde SD sans
-  réponse) et `nifm` ne répondent plus ; `am`, `time`, `ts`, `nvdrv`
-  répondent en 0-1 ms ; `hid` (vibration) s'arrête un peu plus tard ; les
-  services repartent parfois ~1 s (HOME traité des minutes après) ;
-- **dès que notre processus se termine** (`stall_exit_s`), la console
-  redevient normale tout de suite (FTP, HOME) ;
-- écartés : pools mémoire de la console (stables au Ko près jusqu'au gel),
-  fuite de sockets (20 en 17 min), cœur 3 (hbloader limite aux cœurs 0-2),
-  `poll_slice_ms = 40` (le débit d'appels ne baisse pas).
-Piste : ce qui bloque, ce sont les requêtes qui font mapper notre mémoire
-au service (gros tampons : écriture fs, send/poll bsd) ; les petites
-requêtes passent. Prochaine mesure : les ~100 dernières opérations réseau
-dans l'autopsie, et le nombre de requêtes bsd par commande.
+**The "whole console freeze" comes from our process.** Five
+reproductions:
+- always **~390-420 s after the first connection to Photon** (0.1.18:
+  397 s; 0.1.20: 391; 0.1.21: 395; 0.1.22: 402 and ~419), not after
+  launch: 10 min on the main menu without network (133 calls) gave
+  nothing, then a freeze 7 min after the match started; at that point
+  **157 to 162 thousand network calls** (~380/s online);
+- autopsy (DECISIONS 51) at the moment of the freeze: `bsd` (UnityMain in
+  `bsdSend` 12.9 s, the network thread in `bsdPoll`, the heartbeat in
+  `sendto`), `fs` (the watchdog in `fsFsCreateFile` 10.9 s, SD probe with no
+  response) and `nifm` no longer respond; `am`, `time`, `ts`, `nvdrv`
+  respond in 0-1 ms; `hid` (rumble) stops a little later; the
+  services sometimes come back for ~1 s (HOME handled minutes later);
+- **as soon as our process ends** (`stall_exit_s`), the console
+  is back to normal right away (FTP, HOME);
+- ruled out: the console's memory pools (stable to the KB until the freeze),
+  socket leak (20 in 17 min), core 3 (hbloader limits to cores 0-2),
+  `poll_slice_ms = 40` (the call rate does not drop).
+Lead: what blocks are the requests that make the service map our memory
+(large buffers: fs write, bsd send/poll); small
+requests go through. Next measurement: the last ~100 network operations
+in the autopsy, and the number of bsd requests per command.
 
-## Soir du 28/10 (v0.1.21) — à vérifier sur console
+## Evening of Oct 28 (v0.1.21) — to be verified on console
 
-- 🟡 **Stats « servies par le cache » encore lentes : cause trouvée.**
-  Chaque stat déclaré « absent » (≈ 60 %) refaisait un vrai stat libnx du
-  nom de base dans le dossier du jeu (`basename_fallback`). Mémorisé
-  maintenant servi par une liste du dossier du jeu, refaite seulement après
-  une création dans ce dossier (DECISIONS 48).
-- ✅ Sous Eden : 2807 replis « nom de base » servis par la liste, **0 vrai
-  stat** ; image 1 : stats 116 ms pour 3087 (672-939 ms avant).
-- 🟡 **`keep_open`** : la LRU de la v0.1.20 reste la meilleure mesurée
-  (deux autres politiques essayées, moins bonnes) ; la réserve rétrécit
-  maintenant d'elle-même si le service FS refuse une ouverture
+- 🟡 **Stats "served by the cache" still slow: cause found.**
+  Each stat declared "absent" (≈ 60 %) redid a real libnx stat of the
+  base name in the game folder (`basename_fallback`). Now memoized,
+  served from a listing of the game folder, redone only after
+  a creation in that folder (DECISIONS 48).
+- ✅ Under Eden: 2807 "base name" fallbacks served from the listing, **0 real
+  stats**; frame 1: stats 116 ms for 3087 (672-939 ms before).
+- 🟡 **`keep_open`**: the v0.1.20 LRU remains the best one measured
+  (two other policies tried, worse); the pool now shrinks
+  by itself if the FS service refuses an open
   (DECISIONS 49).
-- ❌ **Autopsie du gel** et **profileur par échantillonnage** : non faits
-  dans la session cloud (interrompus par le filtre de sécurité, DECISIONS
-  50). La vibration de la v0.1.20 a prouvé que notre processus vit pendant
-  le gel complet.
+- ❌ **Freeze autopsy** and **sampling profiler**: not done
+  in the cloud session (interrupted by the safety filter, DECISIONS
+  50). The v0.1.20 rumble proved that our process is alive during
+  the full freeze.
 
-## Nuit du 28 au 29/10 (v0.1.20) — à vérifier sur console
+## Night of Oct 28-29 (v0.1.20) — to be verified on console
 
-- 🟢 **Blocage n° 1 (GC / Quantum) : corrigé, validé sous Eden.** Un thread
-  qui n'atteint pas de point sûr 30 ms après le signal du GC alors qu'il
-  exécute du code du jeu est mis en pause (`svcSetThreadActivity`), ses
-  registres sont recopiés sous son SP et un thread proxy exécute le vrai
-  gestionnaire de bdwgc sur sa pile, à sa place (DECISIONS 45,
-  `[debug] gc_force_ms`). Auto-test `smoke_test = 3` : 5e thread en boucle
-  sans aucun appel → 5/5 tours (sans la correction : ack manquant, 3 s
-  d'attente). Dans le jeu sous Eden (`gc_spin_test = 900`) :
-  `il2cpp_gc_collect` revient en 90 ms avec 1 livraison forcée pendant
-  qu'un thread attaché à IL2CPP boucle — `PASSED` — puis 10 min de jeu
-  normales.
-- 🟡 **Blocage n° 2 (gel de la console) : pas de cause, mais le battement
-  ne dépend plus du verrou de malloc** (formateur entier `nx_bfmt`), compte
-  les `sendto` lents/en échec, et donne l'état du GC, les appels noyau de
-  mappage mémoire et les ioctls nv en cours (`nx_kmon.c`). Nouveau témoin
-  sans réseau ni SD : la manette vibre deux fois toutes les 5 s si le jeu
-  est figé depuis 12 s et que le processus vit (`[debug] stall_rumble_s`).
-- 🟡 **Ouvertures de fichiers** : les fichiers de données en lecture seule
-  fermés par Unity restent ouverts (64 au plus) et sont rendus à la
-  réouverture, sans aller-retour FS (`[io] keep_open`, DECISIONS 47). Sous
-  Eden : 213 réouvertures servies sans la SD au démarrage (sur ~960
-  ouvertures), aucun fichier manquant, 10 min de jeu normales.
-- ✅ Sous Eden (CI) : 1171 battements reçus par l'écoute du runner en 10 min
-  (`gc:`, `kmem:`, `nv:` présents) ; les « failed » nv étaient des
-  expirations normales d'attente d'événement GPU (`0xc010001e`), comptées à
-  part depuis (`timeouts`).
-- 🔧 CI : depuis l'ajout de `[io]` en fin de `mvlo.ini`, les lignes ajoutées
-  par emu-test (`autopress`, `hitch_ms`…) tombaient dans `[io]` et étaient
-  ignorées ; elles retombent dans `[debug]`. emu-test écoute aussi le
-  battement (`netlog = 127.0.0.1:9999`, docker `--network host`).
+- 🟢 **Hang no. 1 (GC / Quantum): fixed, validated under Eden.** A thread
+  that has not reached a safe point 30 ms after the GC signal while it is
+  executing game code is paused (`svcSetThreadActivity`), its
+  registers are copied below its SP and a proxy thread runs bdwgc's real
+  handler on its stack, in its place (DECISIONS 45,
+  `[debug] gc_force_ms`). Self-test `smoke_test = 3`: a 5th thread looping
+  without any call → 5/5 rounds (without the fix: missing ack, 3 s
+  wait). In the game under Eden (`gc_spin_test = 900`):
+  `il2cpp_gc_collect` returns in 90 ms with 1 forced delivery while
+  a thread attached to IL2CPP loops — `PASSED` — then 10 min of normal
+  play.
+- 🟡 **Hang no. 2 (console freeze): no cause, but the heartbeat
+  no longer depends on the malloc lock** (integer formatter `nx_bfmt`),
+  counts slow/failed `sendto` calls, and gives the GC state, the kernel
+  memory-mapping calls and the nv ioctls in progress (`nx_kmon.c`). New
+  indicator with neither network nor SD: the controller rumbles twice every
+  5 s if the game has been frozen for 12 s and the process is alive
+  (`[debug] stall_rumble_s`).
+- 🟡 **File opens**: read-only data files
+  closed by Unity stay open (64 at most) and are handed back on
+  reopening, without an FS round trip (`[io] keep_open`, DECISIONS 47).
+  Under Eden: 213 reopens served without the SD at boot (out of ~960
+  opens), no missing file, 10 min of normal play.
+- ✅ Under Eden (CI): 1171 heartbeats received by the runner's listener in
+  10 min (`gc:`, `kmem:`, `nv:` present); the nv "failed" were normal
+  GPU event wait timeouts (`0xc010001e`), counted separately
+  since then (`timeouts`).
+- 🔧 CI: since `[io]` was added at the end of `mvlo.ini`, the lines added
+  by emu-test (`autopress`, `hitch_ms`…) landed in `[io]` and were
+  ignored; they land in `[debug]` again. emu-test also listens to the
+  heartbeat (`netlog = 127.0.0.1:9999`, docker `--network host`).
 
-## Bugs trouvés et corrigés grâce à l'émulation / l'analyse
-1. `initJni` prend **5 arguments** dans Unity 6000.3 (cloverpit : 4).
-2. Le GC Boehm de cloverpit (ack sans handler) pouvait faire `ABORT("sp not set")`
-   → émulation de signaux POSIX ; puis interblocage possible sur un mutex
-   contendu → toutes les attentes rendues interruptibles.
-3. errno : les shims renvoyaient des valeurs newlib (ETIMEDOUT=116) à du code
-   bionic qui attend Linux (110).
-4. `fatal_error()` n'écrivait rien dans le log ; `DEBUG_LOG 0` désactivait tout.
-5. Patches de code via alias `svcMapProcessMemory` → désormais écrits avant le
-   mapping (fonctionne aussi sans vrai handle de processus).
-6. 4 imports libunity 6000.3 manquants (`writev`, `fseeko64`, …).
-7. Dialogues d'erreur Unity (modaux Java) → bloquaient sans rien dire ;
-   désormais journalisés et fermés automatiquement.
-8. Variables de condition newlib non interruptibles → interblocage GC
-   reproduit par l'auto-test, réécrites.
-9. Unity 6000.3 n'écrit pas `data.unity3d` (fichiers sérialisés séparés) :
-   la vérification des données au démarrage l'exigeait à tort.
+## Bugs found and fixed thanks to emulation / analysis
+1. `initJni` takes **5 arguments** in Unity 6000.3 (cloverpit: 4).
+2. cloverpit's Boehm GC (ack without handler) could hit `ABORT("sp not set")`
+   → POSIX signal emulation; then a possible deadlock on a contended
+   mutex → all waits made interruptible.
+3. errno: the shims returned newlib values (ETIMEDOUT=116) to bionic code
+   that expects Linux values (110).
+4. `fatal_error()` wrote nothing to the log; `DEBUG_LOG 0` disabled everything.
+5. Code patches through an `svcMapProcessMemory` alias → now written before
+   the mapping (also works without a real process handle).
+6. 4 missing libunity 6000.3 imports (`writev`, `fseeko64`, …).
+7. Unity error dialogs (Java modals) → blocked silently;
+   now logged and closed automatically.
+8. Non-interruptible newlib condition variables → GC deadlock
+   reproduced by the self-test, rewritten.
+9. Unity 6000.3 does not write `data.unity3d` (separate serialized files):
+   the data check at startup wrongly required it.
 
-## Points ouverts / risques connus
-- Performances réelles et audio jamais mesurés sur console.
-- Réseau en ligne : implémenté (nx_net.c) mais jamais testé contre Photon.
-- Audio : patches FMOD/OpenSL de cloverpit re-dérivés, non écoutés.
-- Sans AppId Photon dans `mvlo.ini`, le mode en ligne ne peut pas se
-  connecter (le jeu le signale : `photon.appid_quantum MISSING`). Voir TEST.md.
+## Open issues / known risks
+- Real performance and audio never measured on console.
+- Online network: implemented (nx_net.c) but never tested against Photon.
+- Audio: cloverpit's FMOD/OpenSL patches re-derived, not listened to.
+- Without a Photon AppId in `mvlo.ini`, online mode cannot
+  connect (the game reports it: `photon.appid_quantum MISSING`). See TEST.md.
