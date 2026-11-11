@@ -1,0 +1,23 @@
+# build outputs
+build/
+*.elf
+*.nro
+*.nacp
+*.map
+*.lst
+# NEVER commit game binaries / assets
+*.apk
+*.so
+*.unity3d
+global-metadata.dat
+*.resource
+*.assets
+assets/
+sd/
+android-out/
+game/
+__pycache__/
+# loading-screen pictures are fetched at build time, never committed
+splash/
+*.ppm
+tools/splash_preview/splash_preview

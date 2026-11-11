@@ -1,0 +1,211 @@
+# mvlo_nx configuration -- copy to sdmc:/switch/mvlo/mvlo.ini
+# (the .nro writes this template there on first boot if mvlo.ini is missing)
+# Lines starting with # or ; are comments.
+
+[photon]
+# YOUR OWN Photon Quantum AppId (see docs/TEST.md, "Créer son AppId Photon").
+# Required for online play. Never shared, never compiled into the .nro.
+appid_quantum =
+# Optional fixed region: eu, us, usw, asia, jp, sa, kr, in, za, uae, cae ...
+# Empty = the game's normal behaviour (best ping / region picked in the menu).
+fixed_region =
+# 0 = anonymous Photon auth (required with your own AppId). Leave at 0.
+use_official_auth = 0
+# Photon only matches players with the same AppId and the same build identifier.
+# Empty = the game's own ("vanilla" for builds from the public sources).
+build_identifier =
+
+[input]
+# nintendo: A confirms / B goes back (by label).  xbox: by position.
+ab_layout = nintendo
+# 1 = the touchscreen works in menus (virtual Touchscreen device)
+touch = 1
+# Switch keyboard for text fields (nickname, chat): 1 = opens right after a
+# button press or a tap on the field, 2 = on every request from the game,
+# 0 = off (only the game's own on-screen keyboard)
+keyboard = 1
+
+[game]
+# 1 = let the game query GitHub for updates (needs HTTPS through Java: off)
+check_updates = 0
+
+# Force the in-game HUD size read at startup (empty = the game's own setting;
+# its slider goes 1..8, 8 = default = biggest; 10 or 12 = bigger still)
+hud_scale =
+
+[video]
+# auto = 1920x1080 docked / 1280x720 handheld, or force 1280x720 / 1920x1080
+resolution = auto
+# 1 = the wrapper paces frames to 60 Hz (on top of the engine's own vsync wait)
+frame_limiter = 1
+# Frame rate used while the game's "Max FPS" option is unlimited (Unity on
+# Android would cap it at 30). 0 = keep Unity's default.
+target_fps = 60
+# Loading screen while the game loads (studio logo, pictures in a loop,
+# progress bar). Pictures: switch/mvlo/splash/ (studio.png, title.png,
+# slide*.jpg|png -- you can put your own there). 0 = off.
+loading_screen = 1
+# 1 = loading screen from the first second of boot instead of ~4 s of black.
+# Uses the EGL config Unity picked at the previous boot (saved in .eglconfig),
+# so the very first boot after install still starts black. 0 = off.
+early_splash = 1
+# Seconds each picture stays on screen
+loading_slide_s = 5
+# Frame cap of the loading screen (10..60)
+loading_fps = 60
+# Size (MB) nouveau's shader code segment jumps to the first time it is full.
+# Stock mesa: 512 KB, doubled up to 8 MB, evicting and re-uploading every
+# shader each time (a crash-prone path). 0 = stock behaviour.
+shader_code_mb = 16
+# 1 = CPU at 1785 MHz while shaders compile (shorter hitches)
+compile_boost = 1
+# nouveau shader optimisation 0..3 (lower = compiles faster, runs slower).
+# Empty = mesa's default (3).
+nv_shader_opt =
+
+[debug]
+# 0 = errors only, 1 = normal, 2 = verbose (slow: every line hits the SD card)
+log_level = 1
+# 1 = flush every log line immediately (slow; use when the console freezes)
+log_sync = 0
+# Boehm GC stop-the-world: bridge (default) | disable (never collect)
+gc = bridge
+# A thread that runs game code for this long (ms) without reaching one of our
+# safepoints is paused and its GC signal handled on its behalf (fixes the game
+# freezing at the start of a match). 0 = off (old behaviour: wait for it).
+gc_force_ms = 30
+# Test: at this frame, collect the GC while a thread spins (0 = off)
+gc_spin_test = 0
+# Engine patches (1 = on). Only change these if asked to while debugging.
+region_patch = 1
+choreographer_patch = 1
+audio_opensl_patch = 1
+fmod_patch = 1
+time_hook = 1
+vsync_feed = 1
+cpu_boost = 1
+# gzip level of the game's own compression (the replay saved at the end of a
+# match freezes the game while it compresses): 1 = fastest .. 9, 0 = the
+# engine's default (6)
+zlib_level = 1
+# Helper threads started at boot to pin thread-local pages (0 = off)
+tls_anchor = 64
+# Real memory set aside at boot (MB). Whatever they don't use is lost to the
+# game, and a level load can run out ("System out of memory"). See the [mem]
+# lines of debug.log: oc "pool used/size" and [gpua] "peak". The oc pool grows
+# by itself if the game needs more; past gpu_arena_mb (a multiple of 64), GPU
+# buffers go to the general heap.
+oc_pool_mb = 448
+gpu_arena_mb = 256
+# Transfer memory (MB) for the GPU system service (libnx default 8). It holds
+# the service's own bookkeeping for this game's GPU buffers. Falls back to 8
+# by itself if refused.
+nv_tmem_mb = 32
+# Log a [hitch] breakdown for every frame slower than this (ms), 0 = never
+hitch_ms = 100
+# Sampling profiler: in every frame slower than this (ms), note where the
+# game's main thread is every 4 ms, into prof.log (read it on the PC with
+# tools/switch/prof_report.py). 0 = off. prof_from_frame skips the boot.
+prof_ms = 0
+prof_from_frame = 300
+# Game stuck (no new frame) for this many seconds: the controller vibrates
+# twice every 5 s for as long as THIS PROCESS is still running. No vibration
+# during a freeze = the process (or the whole console) is stopped. 0 = off.
+stall_rumble_s = 12
+# At the start of such a freeze, write what every thread is waiting on, and
+# which system services still answer, to autopsy.log (and to netlog over UDP).
+# Then one long vibration = written to the SD card, three short = not. 0 = off.
+autopsy = 1
+# Close the game by itself after this many seconds without a new frame (time
+# spent in the HOME menu does not count), instead of holding POWER. 0 = never.
+stall_exit_s = 90
+# Test of the freeze tooling: stop the render loop for good at this frame
+# (about 30 or 60 per second). 0 = off.
+fake_stall_frame = 0
+# Test of the freeze cause: this many extra bsd (network) requests a second from
+# the main menu on, no online play needed (2000 = the ~160k requests seen
+# before each freeze in ~80 s). bsd_flood_op = poll, sockopt or pollwait
+# (5 ms polls back to back, like Photon's receive thread). 0 = off.
+bsd_flood = 0
+bsd_flood_op = poll
+# 1 = keep a ring of the last ~30 s of Photon UDP datagrams (both directions:
+# time to the ms, size, first 16 bytes = Photon command header). Shown in the
+# freeze autopsy and every 1800 frames in debug.log. 0 = off.
+photon_ring = 0
+# Test without Photon: a side thread mimics Photon's UDP traffic (connected
+# socket, ~20 datagrams/s, a 5 ms receive poll) to a UDP echo on your PC.
+# Run on the MAIN MENU ~10 min: a freeze there means the console's network
+# stack, not Photon. Set to <PC IP>:<port>, e.g. 192.168.1.20:9998. Empty = off.
+# udp_soak_connect = 0 uses sendto to an explicit address instead of connect.
+# PC side: php tools/switch/udp_echo.php (Windows lets php-cgi listen; see it).
+# udp_soak_layer = 1 goes through the port's socket layer (Photon's path);
+# udp_soak_dns = 1 sends DNS queries, so udp_soak = 1.1.1.1:53 makes a resolver
+# on the Internet answer them; udp_soak_hz = datagrams a second (default 20);
+# udp_soak_reuse = 1 sets SO_REUSEADDR, the one option Photon sets.
+udp_soak =
+udp_soak_connect = 1
+udp_soak_layer = 0
+udp_soak_dns = 0
+udp_soak_hz = 20
+# Live state sent twice a second over UDP to a PC (tools/switch/netlog_listen.py):
+# <PC IP>[:port], default port 9999. Empty = off.
+netlog =
+# Command line handed to Unity (advanced; empty = none)
+unity_args =
+
+[io]
+# 1 = SD block cache for the game data (64 KB blocks, read-ahead). 0 = off.
+cache = 1
+# 1 = stat() / access() on assets/ and il2cpp/ answered from a directory
+# listing kept in memory (each real stat costs 5 SD round trips). 0 = off.
+stat_cache = 1
+# Read-only data files closed by the game stay open (up to this many) and are
+# handed back at the next open of the same file: no SD round trip. 0 = off.
+keep_open = 64
+# From the main menu on, keep every data file up to this size (KB) in memory
+# (~40 MB at 1024, read in ~7 s in the background): no SD access when the
+# game opens them later (first Room Settings, match start). 0 = off.
+preload_kb = 1024
+# 1 = opening a preloaded file costs no SD request at all (a descriptor served
+# from memory). 0 = open it on the SD card as usual.
+phantom_fds = 1
+# 1 = ask the SD card for each data file's timestamps at open (an extra round
+# trip libnx makes; the game never uses them). 0 = skip it.
+open_timestamps = 0
+# 1 = a file the game creates (the replay saved when a match ends) is written,
+# closed and committed by a separate thread when the game closes it, and old
+# replays are deleted there too. 0 = on the game's thread, as before.
+write_behind = 1
+
+[net]
+# 1 = UDP datagrams (Photon) are queued and sent by a separate thread, so a
+# slow network service never stalls the game's frame. 0 = sent in place.
+async_send = 1
+# Length in ms of one wait on the sockets (1-1000). Each one is a request to
+# the console's network service; 10 = about 380 a second while online.
+# 0 = no slicing: one request per wait (at most 1 s, for the GC).
+poll_slice_ms = 10
+# 1 = keep every network request small enough to be copied to the network
+# service instead of having the game's memory mapped into it (test of the
+# freeze ~7 min into online play). 0 = as before.
+small_ipc = 0
+# 1 = libnx's default socket buffers (sb_efficiency 4) instead of the game's
+# (sb_efficiency 8, bigger TCP buffers). 0 = the game's.
+socket_config = 0
+# Sessions to the network service used in parallel (1-8, libnx default 3).
+bsd_sessions = 3
+# 1 = network waits happen here (0 ms polls with 1 ms sleeps) instead of
+# inside the console's network service. Test of the ~396 s online freeze.
+local_wait = 0
+# --- candidate fixes for the ~400 s online freeze (off by default) ---
+# 1 = chiaki-ng's real-time UDP socket config: udp tx/rx 256 KB, sb_efficiency
+# 8, up to 16 bsd sessions (libnx max; steps down if the console refuses).
+chiaki_cfg = 0
+# 1 = don't call connect() on UDP sockets at the bsd level; keep the peer and
+# sendto/recvfrom-filter it (the game still sees a connected socket). Tests
+# whether a long-lived *connected* UDP socket in bsdsocket is what rots.
+udp_unconnected = 0
+# N > 0 = after N s of a UDP connection, swap a fresh bsd socket under the same
+# fd (new source port). RISK: Photon may see a new flow and drop the session;
+# run with [debug] photon_ring = 1 to watch. 0 = off.
+photon_rebind_s = 0
