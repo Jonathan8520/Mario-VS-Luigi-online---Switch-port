@@ -306,6 +306,16 @@ artifact diff, `resolve_stall.py` to name the addresses in dumps
 with the `mvlo-symbols` artifact, heartbeat listener
 `netlog_listen.py`/`.php`).
 
+## Nov 12 — v0.1.48: the "Jungle" crash, for real this time
+
+- ✅ v0.1.47 crashed again on Jungle after 19 min online (4 new levels
+  before it): `[gpua] memalign FAILED size=131068 KB`. Every new level took
+  128 MB of contiguous newlib for a 64 MB Unity region, and none came back
+  (DECISIONS 85). Unity's regions now get 64 MB slots carved from the top
+  of the heap, reused when Unity unmaps them. Verified on the console:
+  9 different levels in a row, Jungle included, newlib flat (946 MB never
+  touched from the third level on), no failure.
+
 ## Nov 12 — v0.1.47: applet mode stopped at launch
 
 - ✅ Launched from the Album (applet mode, a few hundred MB), the game used

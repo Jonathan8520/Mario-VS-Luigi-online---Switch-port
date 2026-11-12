@@ -1160,3 +1160,29 @@ Each entry: the decision, why, and how to revert it.
     in its override_config template), while the Album opens hbmenu as an
     applet; an hbmenu icon installed on the HOME menu also works, but a
     player who ends up in applet mode most likely has none.
+85. **Unity's 64 MB regions from the top of the heap (v0.1.48, Nov 12).**
+    The "Jungle" crash came back after 19 minutes online on v0.1.47 (same
+    `[gpua] memalign FAILED size=131068 KB`): the 448/256 defaults of
+    DECISIONS 71 only delayed it. Each new level costs Unity one 64 MB
+    region, asked as a 131 068 KB over-map. Once the OC window and the
+    192 MB arena are full it went to `mmap_fallback` =
+    `memalign(64 MB, 131 068 KB)` from newlib: 64 MB of alignment slack, and
+    the 64 MB tail Unity munmaps right away was ignored (only a munmap of the
+    block's start freed anything). "Never touched" fell 128 MB per new level
+    (532 → 404 → 276 → 148 MB) until the fifth one failed. Two changes:
+    - the tail munmap of a fallback block now shrinks it in place
+      (`realloc`, which newlib never moves when shrinking);
+    - Unity's big anonymous maps get 64 MB slots carved downward from the top
+      of the newlib heap: `fake_heap_end` is lowered under `__malloc_lock`
+      (libsysbase's `_sbrk_r` reads it on every call), by 256 MB at a time,
+      never closer than 64 MB to the break. Regions are placed lowest-address
+      first and the lowest slot is kept free, so each trimmed half lands where
+      the next region starts; a munmap frees the slots it covers, and freed
+      slots are reused. Nothing assumes Unity trims: a map it keeps whole
+      keeps both slots.
+    Verified on the console: 9 different levels in one private-room session
+    (Plaines, Souterrain, Forteresse, Tuyaux, Glace, Jungle, Désert, Volcan,
+    Ciel), newlib flat at 1004 MB in use / 946 MB never touched from the
+    third level on, 2-4 regions live in 512 MB of slots (Unity does unmap
+    regions between levels; one slot was reused three times), no failure.
+    The `[mem]` line now ends with `regions: N x 64 MB in M MB`.

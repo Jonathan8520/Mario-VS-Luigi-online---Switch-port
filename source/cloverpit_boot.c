@@ -88,9 +88,13 @@ static void log_mem(void) {
   nx_thr_stats(&tc, &tr, &tj, &tf);
   char rl[160];
   nx_kmon_rl_beacon(rl, sizeof rl);
-  debugPrintf("[mem] newlib: in use %u MB, free in arena %u MB, never touched %u MB | oc: committed %u MB, pool %u/%u MB | files open %d"
+  extern void rs_stats(unsigned *used_slots, unsigned *carved_mb);
+  unsigned rsu, rsc;
+  rs_stats(&rsu, &rsc);
+  debugPrintf("[mem] newlib: in use %u MB, free in arena %u MB, never touched %u MB | oc: committed %u MB, pool %u/%u MB"
+              " | regions: %u x 64 MB in %u MB | files open %d"
               " | threads: %u created, %u reaped, %u joined, %u failed%s\n",
-              (unsigned)(mi.uordblks >> 20), (unsigned)(mi.fordblks >> 20), never, occ, ocu, ocp, nx_files_open(),
+              (unsigned)(mi.uordblks >> 20), (unsigned)(mi.fordblks >> 20), never, occ, ocu, ocp, rsu, rsc, nx_files_open(),
               tc, tr, tj, tf, rl);
 }
 

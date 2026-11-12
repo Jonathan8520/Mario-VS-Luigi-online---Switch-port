@@ -2357,10 +2357,58 @@ static void *mmap_fallback(size_t length, int flags, int fd, long offset) {
   if (g_fb_n < MMAP_FALLBACK_MAX) { g_fb[g_fb_n].ptr = q; g_fb[g_fb_n].len = length; g_fb_n++; g_fb_bytes += length; }
   const size_t total = g_fb_bytes;
   mutexUnlock(&g_fb_lock);
-  if (TRACE_MMAP) debugPrintf("[mmap] fallback %u KB -> %p  anon=%d fd=%d off=0x%lx got=%ld (total %u MB)\n",
-              (unsigned)(length >> 10), q, !!(flags & BIONIC_MAP_ANONYMOUS), fd, offset, got,
-              (unsigned)(total >> 20));
+  if (TRACE_MMAP || length >= MMAP_BIG_THRESH)   /* big ones are rare: a few per session */
+    debugPrintf("[mmap] newlib fallback %u KB -> %p  anon=%d fd=%d off=0x%lx got=%ld (fallback total %u MB)\n",
+                (unsigned)(length >> 10), q, !!(flags & BIONIC_MAP_ANONYMOUS), fd, offset, got,
+                (unsigned)(total >> 20));
   return q;
+}
+
+/* Tail munmap inside a fallback block: shrink the block in place.
+ *
+ * Unity reserves each 64 MB region as a 131068 KB over-map and then munmaps
+ * whatever lies past the aligned 64 MB it keeps. Our fallback block is already
+ * MMAP_BIG_ALIGN-aligned, so that trim arrives as munmap(start + 64 MB, ~64 MB):
+ * not the block's start, so mmap_fallback_free() ignored it and the block kept
+ * all 128 MB of newlib for a 64 MB region. Every new level costs one such
+ * region, so a session lost 128 MB of newlib per new level until a 131068 KB
+ * memalign found no room ("[gpua] memalign FAILED" on Jungle, Nov 3 and 12).
+ *
+ * newlib's realloc never moves a shrinking chunk: it splits it and frees the
+ * remainder, which goes straight back to the heap as one contiguous run. A
+ * munmap of a middle range (not reaching the block's end) still can't be given
+ * back and is left alone, as before. Returns 1 if addr was inside a block. */
+static int mmap_fallback_trim(void *addr, size_t length) {
+  uint8_t *a = addr;
+  int found = 0, moved = 0;
+  size_t was = 0, kept = 0;
+  void *start = NULL;
+  mutexLock(&g_fb_lock);
+  for (int i = 0; i < g_fb_n; i++) {
+    uint8_t *s = g_fb[i].ptr, *e = s + g_fb[i].len;
+    if (a <= s || a >= e) continue;
+    found = 1;
+    start = s;
+    was = g_fb[i].len;
+    kept = was;
+    if (a + length >= e) {
+      const size_t keep = (size_t)(a - s);
+      const uintptr_t sv = (uintptr_t)s;
+      const uintptr_t r = (uintptr_t)realloc(s, keep);
+      if (r == sv) { kept = keep; g_fb[i].len = kept; g_fb_bytes -= was - kept; }
+      else if (r) moved = 1;          /* never happens with newlib; would be fatal */
+    }
+    break;
+  }
+  mutexUnlock(&g_fb_lock);
+  if (found && kept != was)
+    debugPrintf("[mmap] fallback %p trimmed by Unity: %u -> %u MB (%u MB back to newlib)\n",
+                start, (unsigned)(was >> 20), (unsigned)(kept >> 20), (unsigned)((was - kept) >> 20));
+  else if (found && was >= MMAP_BIG_THRESH)
+    debugPrintf("[mmap] fallback %p: munmap +%u KB len %u KB not at its end, kept%s\n", start,
+                (unsigned)((a - (uint8_t *)start) >> 10), (unsigned)(length >> 10),
+                moved ? " -- REALLOC MOVED THE BLOCK" : "");
+  return found;
 }
 
 // returns 1 and frees if addr was a fallback allocation
@@ -2377,6 +2425,121 @@ static int mmap_fallback_free(void *addr) {
   }
   mutexUnlock(&g_fb_lock);
   return 0;
+}
+
+// ---- region slots: Unity's 64 MB regions from the top of the newlib heap ---
+// Once the OC window and the 192 MB arena are full, every Unity region used to
+// go to mmap_fallback: memalign(64 MB, 131068 KB) from newlib. That costs a
+// 64 MB alignment slack plus the 64 MB tail Unity trims away, and the holes it
+// leaves are too small for the next region, so each new level took 128 MB of
+// contiguous "never touched" heap for good. Five or six of them and the next
+// one failed (the "Jungle" crash, Nov 3 and Nov 12).
+//
+// Here the regions get 64 MB slots carved DOWNWARD from the top of the newlib
+// heap: newlib grows up from below, the slots grow down from fake_heap_end,
+// which is simply lowered (libsysbase's _sbrk_r reads it on every call, and
+// malloc only calls sbrk under __malloc_lock, which we hold to move it).
+// Unity's over-map is two slots: it keeps the lower one and trims the upper.
+// Regions are placed lowest-address first and the lowest slot is always kept
+// free, so each new region's trimmed half lands on a slot the next region can
+// start in: in steady state a region costs one 64 MB slot and no slack.
+// Anything Unity keeps whole (no trim) simply keeps both slots.
+#define RS_SLOT   ((size_t)MMAP_BIG_ALIGN)          // 64 MB
+#define RS_MAX    48                                // more than the whole heap
+#define RS_MARGIN ((size_t)64 << 20)               // never take newlib's last 64 MB
+extern char *fake_heap_end;
+extern void __malloc_lock(struct _reent *);
+extern void __malloc_unlock(struct _reent *);
+static Mutex    rs_lock;
+static uint8_t *rs_top;                 // 64 MB-aligned ceiling, fixed at first use
+static int      rs_n;                   // slots carved: [rs_top - rs_n*RS_SLOT, rs_top)
+static uint8_t  rs_used[RS_MAX];        // slot i = [rs_top-(i+1)*RS_SLOT, rs_top-i*RS_SLOT)
+static uint8_t *rs_mapend[RS_MAX];      // end of the mapping that owns the slot
+static unsigned rs_regions;
+
+static inline uint8_t *rs_addr(int i) { return rs_top - (size_t)(i + 1) * RS_SLOT; }
+
+// Lowers newlib's ceiling to make n slots. Caller holds rs_lock.
+static int rs_carve_locked(int n) {
+  uint8_t *bottom = rs_top - (size_t)n * RS_SLOT;
+  int ok = 0;
+  __malloc_lock(_REENT);
+  char *brk = sbrk(0);
+  if (n <= RS_MAX && brk != (char *)-1 && (uint8_t *)brk + RS_MARGIN <= bottom) {
+    fake_heap_end = (char *)bottom;
+    rs_n = n;
+    ok = 1;
+  }
+  __malloc_unlock(_REENT);
+  return ok;
+}
+
+// Lowest-address run of m free slots, never starting in the lowest slot (the
+// spill target of the next carve). -1 if none.
+static int rs_find_locked(int m) {
+  for (int s = rs_n - 2; s >= m - 1; s--) {
+    int k = 0;
+    while (k < m && !rs_used[s - k]) k++;
+    if (k == m) return s;
+  }
+  return -1;
+}
+
+static void *rs_alloc(size_t len) {
+  const int m = (int)((len + RS_SLOT - 1) / RS_SLOT);
+  if (m < 1 || m > 4) return NULL;
+  int j = -1, carved = 0;
+  mutexLock(&rs_lock);
+  if (!rs_top) {
+    __malloc_lock(_REENT);
+    rs_top = (uint8_t *)((uintptr_t)fake_heap_end & ~(uintptr_t)(RS_SLOT - 1));
+    __malloc_unlock(_REENT);
+  }
+  j = rs_find_locked(m);
+  for (int k = 4; j < 0 && k >= 1; k--)           // carve 256 MB at once if possible
+    if (rs_carve_locked(rs_n + k)) { carved = k; j = rs_find_locked(m); }
+  void *p = NULL;
+  if (j >= 0) {
+    for (int k = 0; k < m; k++) { rs_used[j - k] = 1; rs_mapend[j - k] = rs_addr(j) + len; }
+    p = rs_addr(j);
+    rs_regions++;
+  }
+  const int n = rs_n;
+  mutexUnlock(&rs_lock);
+  if (!p) return NULL;
+  memset(p, 0, len);                               // anonymous memory reads as zero
+  debugPrintf("[mmap] region %u KB -> %p (slot %d of %d%s, %u MB carved from the heap top)\n",
+              (unsigned)(len >> 10), p, j, n, carved ? ", new slots" : "",
+              (unsigned)(((size_t)n * RS_SLOT) >> 20));
+  return p;
+}
+
+// munmap inside the slots: free every slot the range covers (up to the end of
+// its own mapping). Returns 1 if addr is in the slots (handled either way).
+static int rs_free(void *addr, size_t len) {
+  uint8_t *a = addr, *b = a + len;
+  int freed = 0;
+  mutexLock(&rs_lock);
+  if (!rs_top || a >= rs_top || a < rs_top - (size_t)rs_n * RS_SLOT) { mutexUnlock(&rs_lock); return 0; }
+  for (int i = 0; i < rs_n; i++) {
+    if (!rs_used[i]) continue;
+    uint8_t *s = rs_addr(i), *e = s + RS_SLOT;
+    uint8_t *need = rs_mapend[i] < e ? rs_mapend[i] : e;
+    if (a <= s && b >= need) { rs_used[i] = 0; freed++; }
+  }
+  mutexUnlock(&rs_lock);
+  if (TRACE_MMAP) debugPrintf("[mmap] region munmap %p +%u KB: %d slot(s) freed\n", addr, (unsigned)(len >> 10), freed);
+  return 1;
+}
+
+// For the [mem] line.
+void rs_stats(unsigned *used_slots, unsigned *carved_mb) {
+  mutexLock(&rs_lock);
+  unsigned u = 0;
+  for (int i = 0; i < rs_n; i++) u += rs_used[i];
+  *used_slots = u;
+  *carved_mb = (unsigned)(((size_t)rs_n * RS_SLOT) >> 20);
+  mutexUnlock(&rs_lock);
 }
 
 // ---- read-only file-map dedup cache ---------------------------------------
@@ -2466,6 +2629,11 @@ void *mmap_fake(void *addr, size_t length, int prot, int flags, int fd, long off
     // and rejecting them is what NULL-derefs the engine. Only a genuinely huge map
     // (> newlib free) will fail, and we log that distinctly.
     // Read-only file maps get deduped (backtrace .so symbolication leak, see above).
+    // Unity's 64 MB regions: slots from the top of the heap, 64 MB each.
+    if ((flags & BIONIC_MAP_ANONYMOUS) && length >= MMAP_BIG_THRESH) {
+      void *r = rs_alloc(length);
+      if (r) return r;
+    }
     int ro_file = fd >= 0 && !(flags & BIONIC_MAP_ANONYMOUS) && !(prot & BIONIC_PROT_WRITE);
     uint64_t mino = (ro_file && fd < FD_INO_MAX) ? g_fd_ino[fd] : 0;
     if (mino) { void *hit = mapcache_get(mino, offset, length); if (hit) return hit; }
@@ -2523,6 +2691,8 @@ void *mmap_fake(void *addr, size_t length, int prot, int flags, int fd, long off
 
 int munmap_fake(void *addr, size_t length) {
   if (mmap_fallback_free(addr)) return 0;   // newlib fallback allocation
+  if (mmap_fallback_trim(addr, length)) return 0;   // Unity trimming a fallback's tail
+  if (rs_free(addr, length)) return 0;              // region slots (top of the heap)
   if (oc_contains(addr)) {                   // stack-region OC reservation
     mutexLock(&g_mmap_lock);
     oc_free_locked(addr, length);
