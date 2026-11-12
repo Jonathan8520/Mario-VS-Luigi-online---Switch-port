@@ -53,6 +53,7 @@
 #include "version.h"
 #include "util.h"
 #include "error.h"
+#include "nx_applet_screen.h"
 #include "so_util.h"
 #include "imports.h"
 #include "jni_fake.h"
@@ -521,6 +522,17 @@ int main(int argc, char *argv[]) {
                 (int)appletGetAppletType(),
                 appletGetAppletType() == AppletType_Application || appletGetAppletType() == AppletType_SystemApplication
                   ? "title takeover: full memory" : "APPLET MODE: launch through a game (hold R) for full memory");
+  }
+  /* Applet mode (hbmenu opened from the Album, or any library applet): the
+   * process only gets a few hundred MB where the game needs well over 1.5 GB.
+   * It used to start anyway and die later, out of memory, in the middle of the
+   * load. Stop here with a screen that explains how to launch it (system
+   * font, CPU-drawn: nx_applet_screen.c); the check is the one Atmosphere's
+   * own homebrew (haze) uses. Returns to hbmenu on A, B or +. */
+  {
+    const AppletType at = appletGetAppletType();
+    if (at != AppletType_Application && at != AppletType_SystemApplication)
+      nx_applet_mode_screen();
   }
   nxcfg_report();
   nx_sig_init();

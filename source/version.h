@@ -1,1 +1,1 @@
-#define MVLO_NX_VERSION "0.1.46"
+#define MVLO_NX_VERSION "0.1.47"

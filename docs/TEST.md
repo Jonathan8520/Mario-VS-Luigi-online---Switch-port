@@ -50,7 +50,9 @@ game **while holding R**: hbmenu opens instead of the game, then pick
 *Mario vs Luigi Online*.
 
 - Do **not** launch from the Album (applet mode: only ~400 MB, the game
-  won't have enough memory; the log reports it: `APPLET MODE`).
+  won't have enough memory). Since v0.1.47 the game detects it at once,
+  shows how to launch it properly and returns to hbmenu on A or B (the log
+  reports `APPLET MODE`).
 - Do not use an NRO/NSP forwarder: on the PvZ Fusion port from the same
   lineage, they crash for lack of memory-mapping permissions.
 - Startup: expect ~30–40 s of a still screen (loading from the SD card)

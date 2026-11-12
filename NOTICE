@@ -5,6 +5,9 @@ built on the SoLoader lineage (badpiggies_nx, colorsheep_nx, laytonbmr_nx, vln_n
 and so-loader by Andy Nguyen (TheFloW), fgsfds and Rinnegatamante, all MIT. Files
 taken from those projects keep their upstream copyright notices.
 
+source/third_party/stb_image.h and stb_truetype.h: Sean Barrett, public domain
+or MIT (their own license text is at the end of each file).
+
 This repository contains NO game code or assets. NSMB Mario vs Luigi Online is by
 ipodtouch0218 and contributors (no license file upstream) and contains Nintendo
 assets; it is not covered by this license and is never redistributed here.

@@ -1140,3 +1140,23 @@ Each entry: the decision, why, and how to revert it.
     handheld screen (the tester plays at 4); there is no Discord on a Switch.
     The key bindings stay the game's: they already suit a Switch controller
     (A/B jump, X/Y run, R/ZR power-up, L/ZL reserve item).
+84. **Applet mode stopped at launch (v0.1.47, Nov 12).** Started from the
+    Album, hbmenu runs as a library applet and the process gets a few hundred
+    MB instead of ~3.2 GB; the game nevertheless went on loading and died
+    later, out of memory. `main()` now checks `appletGetAppletType()` right
+    after opening the log: anything other than `AppletType_Application` /
+    `AppletType_SystemApplication` goes to `nx_applet_mode_screen()`. Same
+    check as Atmosphère's own homebrew (troposphere/haze), and the usual
+    libnx pattern. The screen is drawn on the CPU into a libnx framebuffer
+    (no EGL/mesa, a few MB): the first loading-screen slide darkened, the
+    game logo, one line saying what to do ("hold R while starting any
+    game"), one saying why, and a system-like footer (version, A/B Exit).
+    Text uses the console's shared system font (pl service, the one hbmenu
+    uses) rasterised by stb_truetype (public domain / MIT, next to
+    stb_image in `source/third_party/`); French or English from the system
+    language. A, B or + returns to hbmenu. If the font or the framebuffer is
+    unavailable it falls back to `fatal_error()`'s text console. Holding R
+    is Atmosphère's default way to get full memory (`override_any_app_key=R`
+    in its override_config template), while the Album opens hbmenu as an
+    applet; an hbmenu icon installed on the HOME menu also works, but a
+    player who ends up in applet mode most likely has none.

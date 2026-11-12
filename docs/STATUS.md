@@ -306,6 +306,16 @@ artifact diff, `resolve_stall.py` to name the addresses in dumps
 with the `mvlo-symbols` artifact, heartbeat listener
 `netlog_listen.py`/`.php`).
 
+## Nov 12 — v0.1.47: applet mode stopped at launch
+
+- ✅ Launched from the Album (applet mode, a few hundred MB), the game used
+  to start anyway and die later, out of memory, during the load. It now
+  checks the applet type first thing and shows a screen in the system font
+  over the game's artwork: "hold R while starting any game", why, and
+  A/B Exit, which returns to hbmenu (DECISIONS 84). Verified on the
+  console: applet mode shows the screen, A and B both return to hbmenu;
+  title mode boots normally to the title screen.
+
 ## Nov 11 — v0.1.46: Switch defaults for a new player
 
 - ✅ A player who has never saved a setting starts with **Max FPS 30**

@@ -30,7 +30,8 @@ Step-by-step guide, Photon AppId and which logs to send back: **[docs/TEST.md](d
 ## Launching
 
 From hbmenu in **title takeover** mode: hold **R** while starting any game,
-then pick *Mario vs Luigi Online*. (Not from the Album: not enough memory.)
+then pick *Mario vs Luigi Online*. (Not from the Album: there is not enough
+memory in that mode, so the game only shows how to launch it and exits.)
 
 ## Build
 
